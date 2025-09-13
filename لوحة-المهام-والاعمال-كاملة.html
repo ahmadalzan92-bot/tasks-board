@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة المهام والاعمال + مرفقات + تعليقات + استيراد Excel + تبادل التعليقات</title>
+  <style>
+    :root{ --bg:#0f172a; --panel:#111827; --card:#0b1220; --text:#e5e7eb; --muted:#94a3b8; --accent:#22c55e; --blue:#3b82f6; --red:#ef4444; --shadow:0 10px 25px rgba(0,0,0,.35); --radius:16px; }
+    [data-theme="light"]{ --bg:#f8fafc; --panel:#ffffff; --card:#f1f5f9; --text:#0f172a; --muted:#475569; --accent:#16a34a; --blue:#2563eb; --shadow:0 8px 18px rgba(2,6,23,.12); }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:linear-gradient(180deg,var(--bg),#020617 80%); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Kufi Arabic","Noto Sans Arabic",Tahoma,Arial,sans-serif; padding:18px; display:flex; flex-direction:column; gap:12px}
+    .btn{border:none; border-radius:12px; padding:10px 12px; background:var(--panel); color:var(--text); cursor:pointer; box-shadow:var(--shadow); display:inline-flex; align-items:center; gap:6px}
+    .btn:hover{filter:brightness(1.06)} .btn.accent{background:linear-gradient(135deg,var(--accent),var(--blue)); color:#fff}
+    .btn.danger{background:var(--red); color:#fff}
+    .field{background:var(--panel); color:var(--text); border:1px solid rgba(148,163,184,.25); padding:10px 12px; border-radius:12px; min-width:220px; box-shadow:var(--shadow)}
+    header.app{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap}
+    .header-left{display:flex; flex-direction:column; gap:2px}
+    h1{margin:0; font-size:clamp(20px,2.2vw,28px)}
+    .credit{font-size:12px; color:var(--muted)}
+    .page-name{font-size:12px; opacity:.9}
+    .actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+
+    .board{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px}
+    .column{background:linear-gradient(180deg,var(--panel),var(--card)); border:1px solid rgba(148,163,184,.15); border-radius:var(--radius); padding:10px; box-shadow:var(--shadow); min-height:340px; display:flex; flex-direction:column; gap:10px}
+    .column-header{display:flex; align-items:center; justify-content:space-between; gap:8px}
+    .column-title{font-weight:700; font-size:16px; outline:none; border-radius:8px; padding:4px 6px}
+    .count{opacity:.85; font-size:12px; background:rgba(59,130,246,.18); padding:2px 8px; border-radius:999px}
+    .col-actions{display:flex; gap:6px; flex-wrap:wrap}
+    .tasks{display:flex; flex-direction:column; gap:8px; min-height:220px; padding:6px}
+    .dropzone{outline:2px dashed rgba(148,163,184,.35); outline-offset:-6px; border-radius:12px}
+
+    .task{background:var(--panel); border:1px solid rgba(148,163,184,.2); border-radius:14px; padding:10px; box-shadow:var(--shadow); cursor:grab; user-select:none; display:flex; flex-direction:column; gap:8px; color:var(--text); transition:background-color .2s,color .2s}
+    .task *{color:inherit}
+    .task-header{display:flex; align-items:center; justify-content:space-between; gap:8px}
+    .task-title{font-weight:700}
+    .pill{font-size:11px; padding:3px 8px; border-radius:999px; background:rgba(148,163,184,.2)}
+    .pill.low{background:rgba(34,197,94,.20)} .pill.med{background:rgba(245,158,11,.20)} .pill.high{background:rgba(239,68,68,.25)}
+    .task-actions{display:flex; gap:4px; flex-wrap:wrap}
+    .icon-btn{background:transparent; border:none; cursor:pointer; padding:6px; border-radius:8px; color:var(--text)}
+    .icon-btn:hover{background:rgba(148,163,184,.15)}
+
+    .attachments{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+    .att{display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:10px; border:1px solid rgba(148,163,184,.3); background:rgba(148,163,184,.12); font-size:12px}
+    .att img{width:28px; height:28px; object-fit:cover; border-radius:6px; display:block}
+
+    .comment-box{display:grid; gap:6px; background:rgba(148,163,184,.08); border:1px solid rgba(148,163,184,.2); border-radius:12px; padding:8px}
+    .comment{font-size:13px; background:var(--card); border:1px solid rgba(148,163,184,.2); border-radius:10px; padding:6px 8px}
+    .comment small{opacity:.8}
+
+    dialog.modal{border:none; border-radius:16px; padding:0; background:var(--panel); color:var(--text); box-shadow:var(--shadow); width:min(760px,96vw)}
+    .modal-header,.modal-footer{padding:12px 14px; border-bottom:1px solid rgba(148,163,184,.15)}
+    .modal-footer{border-bottom:none; border-top:1px solid rgba(148,163,184,.15); display:flex; gap:8px}
+    .modal-body{padding:14px; display:grid; gap:10px}
+    .modal input,.modal textarea,.modal select{width:100%; background:var(--card); border:1px solid rgba(148,163,184,.25); color:var(--text); border-radius:12px; padding:10px}
+    textarea{min-height:90px}
+
+    .overlay{position:fixed; inset:0; background:rgba(2,6,23,.92); display:flex; align-items:center; justify-content:center; z-index:50}
+    .login{background:linear-gradient(180deg,var(--panel),var(--card)); border:1px solid rgba(148,163,184,.2); border-radius:16px; padding:18px; box-shadow:var(--shadow); width:min(520px,95vw); display:grid; gap:12px}
+    .muted{color:var(--muted); font-size:12px}
+    .row{display:grid; gap:6px}
+
+    .admin-panel{background:linear-gradient(180deg,var(--panel),var(--card)); border:1px solid rgba(148,163,184,.15); border-radius:16px; padding:12px; display:grid; gap:10px}
+    .admin-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:8px}
+    .card{background:var(--panel); border:1px solid rgba(148,163,184,.15); border-radius:12px; padding:10px; display:grid; gap:8px}
+
+    .global{background:linear-gradient(180deg,var(--panel),var(--card)); border:1px solid rgba(148,163,184,.15); border-radius:16px; padding:12px; display:grid; gap:10px}
+    .global table{width:100%; border-collapse:collapse}
+    .global th,.global td{border:1px solid rgba(148,163,184,.2); padding:6px 8px; font-size:13px}
+
+    .sr-only{position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden}
+  </style>
+</head>
+<body>
+  <!-- Login Overlay -->
+  <div id="gate" class="overlay" role="dialog" aria-modal="true">
+    <div class="login">
+      <h2 style="margin:0">تسجيل الدخول</h2>
+      <div class="row">
+        <label>الصفحة
+          <select id="pageSelect" class="field"></select>
+        </label>
+        <label>كلمة المرور
+          <input id="pagePassword" class="field" type="password" placeholder="••••" />
+        </label>
+      </div>
+      <form id="loginForm" class="row" style="grid-auto-flow:column; justify-content:start; gap:8px" novalidate>
+        <button id="loginBtn" type="submit" class="btn accent">دخول</button>
+        <button id="lightBtn" type="button" class="btn">🌓 الوضع</button>
+        <button id="resetPagesBtn" type="button" class="btn danger" title="استعادة الصفحات الافتراضية">تهيئة الصفحات</button>
+      </form>
+      <div id="loginStatus" class="muted"></div>
+      <p class="muted">الافتراضي: مسؤول 1234، صفحات 1111/2222/3333/4444 — يمكن تغييرها من لوحة المسؤول.</p>
+    </div>
+  </div>
+
+  <!-- App Header -->
+  <header class="app" id="appHeader" hidden>
+    <div class="header-left">
+      <h1>لوحة المهام والاعمال + مرفقات + تعليقات</h1>
+      <div class="credit">إعداد وتصميم م. أحمد الزن</div>
+      <div class="page-name" id="pageName"></div>
+      <div class="muted" id="appStatus"></div>
+    </div>
+    <div class="actions">
+      <input id="search" class="field" type="search" placeholder="🔎 بحث عن مهمة..." />
+      <button id="addTaskBtn" type="button" class="btn accent">➕ مهمة</button>
+      <button id="addColumnBtn" type="button" class="btn">➕ عمود</button>
+      <button id="exportAllWordBtn" type="button" class="btn">📄 جميع الأعمدة</button>
+      <button id="exportAllExcelBtn" type="button" class="btn">📊 جميع الأعمدة</button>
+      <button id="exportBtn" type="button" class="btn">⬇️ JSON</button>
+      <label class="btn" for="importFile">⬆️ استيراد JSON</label>
+      <input id="importFile" type="file" accept="application/json" hidden />
+      <label class="btn" for="importExcel">⬆️ استيراد مهام (Excel/CSV)</label>
+      <input id="importExcel" type="file" accept=".csv,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+      <button id="resetBtn" type="button" class="btn danger">🗑️ إعادة ضبط الصفحة</button>
+      <button id="switchBtn" type="button" class="btn">🔁 تبديل الصفحة</button>
+      <button id="themeBtn" type="button" class="btn">🌓</button>
+      <button id="bulletinBtn" type="button" class="btn">📣 التعليقات العامة</button>
+    </div>
+  </header>
+
+  <!-- Broadcast banners -->
+  <section id="banners" class="row" style="gap:8px;display:none">
+    <div id="bannerGlobal" class="card" style="display:none"></div>
+    <div id="bannerToAdmin" class="card" style="display:none"></div>
+    <div id="bannerFromAdminToBranch" class="card" style="display:none"></div>
+  </section>
+
+  <section id="adminPanel" class="admin-panel" hidden>
+    <h3 style="margin:0 0 6px">لوحة المسؤول — إدارة الصفحات</h3>
+    <div id="adminGrid" class="admin-grid"></div>
+  </section>
+
+  <!-- Global (admin overview) -->
+  <section id="globalPanel" class="global" hidden>
+    <h3 style="margin:0">📊 ملخص جميع الصفحات</h3>
+    <div class="row" style="grid-auto-flow:column;align-items:center;gap:8px">
+      <label>اختيار صفحة للعرض
+        <select id="globalPage" class="field"></select>
+      </label>
+      <button id="refreshGlobal" class="btn">🔄 تحديث</button>
+    </div>
+    <div id="globalTableWrap"></div>
+  </section>
+
+  <main id="board" class="board" hidden></main>
+  <p id="hint" class="muted" hidden>💡 الآن يمكن إضافة المرفقات والتعليقات من داخل بطاقة المهمة نفسها. الحفظ يتم في المتصفح.</p>
+
+  <!-- Column & Task Templates -->
+  <template id="columnTemplate">
+    <section class="column" data-column>
+      <div class="column-header">
+        <div class="column-title" contenteditable="true">عمود</div>
+        <div class="col-actions">
+          <span class="count">0</span>
+          <input class="icon-btn" type="color" data-col-color title="لون مهام العمود" style="width:36px;height:32px;padding:0;border-radius:8px;border:none;" />
+          <button class="icon-btn" type="button" data-col-color-clear title="إزالة لون العمود">✖</button>
+          <button class="icon-btn" type="button" data-add-task title="إضافة مهمة">➕</button>
+          <button class="icon-btn" type="button" data-col-word title="تصدير Word">📄</button>
+          <button class="icon-btn" type="button" data-col-excel title="تصدير Excel">📊</button>
+          <button class="icon-btn" type="button" data-delete-col title="حذف العمود">🗑️</button>
+        </div>
+      </div>
+      <div class="tasks" data-tasks></div>
+    </section>
+  </template>
+
+  <template id="taskTemplate">
+    <article class="task" draggable="true" data-task>
+      <div class="task-header">
+        <div class="task-title" data-title></div>
+        <div class="task-actions">
+          <button class="icon-btn" type="button" data-toggle-comments title="إظهار/إخفاء التعليقات">💬</button>
+          <button class="icon-btn" type="button" data-export-doc title="Word">📄</button>
+          <button class="icon-btn" type="button" data-export-xls title="Excel">📊</button>
+          <button class="icon-btn" type="button" data-edit title="تعديل">✏️</button>
+          <button class="icon-btn" type="button" data-delete title="حذف">🗑️</button>
+        </div>
+      </div>
+      <div><span class="pill" data-created></span> <span class="pill" data-priority></span></div>
+      <div class="task-notes" data-notes></div>
+
+      <!-- Attachments inline within the task -->
+      <div class="attachments" data-atts></div>
+      <div class="row" style="grid-auto-flow:column;align-items:center;gap:6px">
+        <input class="sr-only" type="file" accept="image/*,application/pdf" multiple data-attach-input>
+        <button class="btn" type="button" data-attach-btn>📎 إضافة مرفق</button>
+      </div>
+
+      <!-- Comments inline -->
+      <div class="comment-box" data-comments style="display:none">
+        <div data-comments-list></div>
+        <div class="row" style="grid-template-columns:1fr auto; gap:6px">
+          <input data-comment-text class="field" placeholder="اكتب تعليقًا..." />
+          <button class="btn accent" type="button" data-add-comment>➤</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <!-- Task Modal (style controls, attachments) -->
+  <dialog id="taskModal" class="modal">
+    <form class="modal" id="taskForm" method="dialog">
+      <div class="modal-header"><strong id="modalTitle">مهمة جديدة</strong></div>
+      <div class="modal-body">
+        <label>العنوان<input id="taskTitle" required placeholder="مثال: إعداد تقرير" /></label>
+        <label>الملاحظات<textarea id="taskNotes" placeholder="تفاصيل..."></textarea></label>
+        <div class="row" style="grid-template-columns:1fr 1fr 1fr; gap:8px">
+          <label>نوع الخط
+            <select id="taskFont">
+              <option value="">افتراضي</option>
+              <option value="'Noto Kufi Arabic', 'Noto Sans Arabic', Tahoma, Arial">كوفي/نوتو</option>
+              <option value="Tahoma, Arial">Tahoma</option>
+              <option value="'Segoe UI', Roboto">Segoe/Roboto</option>
+            </select>
+          </label>
+          <label>حجم الخط (px)
+            <input id="taskFontSize" type="number" min="10" max="48" step="1" placeholder="افتراضي" />
+          </label>
+          <label>لون الخط
+            <input id="taskFontColor" type="color" value="#e5e7eb" />
+          </label>
+        </div>
+        <label>الأولوية<select id="taskPriority"><option value="low">منخفضة</option><option value="medium" selected>متوسطة</option><option value="high">مرتفعة</option></select></label>
+        <fieldset style="border:1px solid rgba(148,163,184,.2);border-radius:12px;padding:8px">
+          <legend class="muted">المرفقات (صور / PDF)</legend>
+          <div class="row" style="grid-auto-flow:column;gap:8px;align-items:center">
+            <input id="taskAttInput" type="file" accept="image/*,application/pdf" multiple class="field" />
+            <button id="clearAtt" class="btn" type="button">مسح</button>
+          </div>
+          <div id="taskAttPreview" class="attachments" style="margin-top:6px"></div>
+        </fieldset>
+        <p class="muted">ملاحظة: تم إلغاء خانة "لون المهمة". لون البطاقات يعتمد على لون العمود فقط.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn accent" id="saveTask">💾 حفظ</button>
+        <button class="btn" value="cancel">إلغاء</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Global Task Viewer Modal (admin) -->
+  <dialog id="globalTaskModal" class="modal">
+    <form class="modal" id="globalTaskForm" method="dialog">
+      <div class="modal-header"><strong id="gTitle">مهمة</strong></div>
+      <div class="modal-body">
+        <div id="gInfo" class="muted"></div>
+        <div id="gNotes" style="margin-top:6px"></div>
+        <h4 style="margin:8px 0 4px">التعليقات</h4>
+        <div id="gComments" class="comment-box"></div>
+        <div class="row" style="grid-template-columns:1fr auto; gap:6px">
+          <input id="gCommentText" class="field" placeholder="اكتب تعليقًا..." />
+          <button class="btn accent" type="button" id="gAddComment">➤</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" value="cancel">إغلاق</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Bulletin (global/page comments) -->
+  <dialog id="bulletinModal" class="modal">
+    <form class="modal" id="bulletinForm" method="dialog">
+      <div class="modal-header"><strong>📣 التعليقات العامة</strong></div>
+      <div class="modal-body">
+        <div id="bulletinInfo" class="muted"></div>
+        <h4 style="margin:8px 0 4px">تعليقات الصفحة الرئيسية (تظهر للجميع)</h4>
+        <div id="bulletinGlobalList" class="comment-box"></div>
+        <div class="row" style="grid-template-columns:1fr auto; gap:6px">
+          <input id="bulletinGlobalText" class="field" placeholder="اكتب تعليقًا عامًا يظهر لجميع الصفحات..." />
+          <button class="btn accent" type="button" id="addBulletinGlobal">➤</button>
+        </div>
+        <h4 style="margin:12px 0 4px">تعليق إلى الصفحة الرئيسية (من هذه الصفحة)</h4>
+        <div id="bulletinToAdminList" class="comment-box"></div>
+        <div class="row" style="grid-template-columns:1fr auto; gap:6px">
+          <input id="bulletinToAdminText" class="field" placeholder="اكتب تعليقًا سيظهر في الصفحة الرئيسية..." />
+          <button class="btn accent" type="button" id="addBulletinToAdmin">➤</button>
+        </div>
+        <div class="row" id="adminReplyRow" style="grid-template-columns:1fr 1fr auto; gap:6px; display:none">
+          <label>اختر فرع للرد<select id="bulletinReplyPage" class="field"></select></label>
+          <input id="bulletinReplyText" class="field" placeholder="رد من المسؤول سيظهر للفرع المختار" />
+          <button class="btn accent" type="button" id="sendReplyToBranch">إرسال الرد</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" value="cancel">إغلاق</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+  "use strict";
+  /** @typedef {{ id:string, name:string, type:string, size:number, dataUrl:string }} Attachment */
+  /** @typedef {{ id:string, text:string, created:number }} Comment */
+  /** @typedef {{ id:string, title:string, notes?:string, priority:'low'|'medium'|'high', created:number, style?:{font?:string, size?:number, color?:string}, atts?:Attachment[], comments?:Comment[] }} Task */
+  /** @typedef {{ id:string, title:string, color?:string, tasks: Task[] }} Column */
+  /** @typedef {{ columns: Column[] }} Board */
+  /** @typedef {{ id:string, name:string, role:'admin'|'user', enabled:boolean, password:string, notes?: Comment[] }} Page */
+
+  const ROOT_KEY = 'kanban_v10_pages';
+  const THEME_KEY = 'kanban_v10_theme';
+  const pageKey = (id)=> `kanban_v10_board_${id}`;
+
+  let root = null; let state /** @type {Board} */ = null; let activePageId = null;
+
+  // DOM
+  const gateEl = document.getElementById('gate');
+  const appHeader = document.getElementById('appHeader');
+  const boardEl = document.getElementById('board');
+  const hintEl = document.getElementById('hint');
+  const pageNameEl = document.getElementById('pageName');
+  const loginStatus = document.getElementById('loginStatus');
+
+  const adminPanel = document.getElementById('adminPanel');
+  const adminGrid = document.getElementById('adminGrid');
+
+  const globalPanel = document.getElementById('globalPanel');
+  const globalPageSel = document.getElementById('globalPage');
+  const refreshGlobalBtn = document.getElementById('refreshGlobal');
+  const globalTableWrap = document.getElementById('globalTableWrap');
+
+  const banners = document.getElementById('banners');
+  const bannerGlobal = document.getElementById('bannerGlobal');
+  const bannerToAdmin = document.getElementById('bannerToAdmin');
+  const bannerFromAdminToBranch = document.getElementById('bannerFromAdminToBranch');
+
+  const pageSelect = document.getElementById('pageSelect');
+  const pagePassword = document.getElementById('pagePassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginForm = document.getElementById('loginForm');
+  const lightBtn = document.getElementById('lightBtn');
+  const resetPagesBtn = document.getElementById('resetPagesBtn');
+
+  const searchEl = document.getElementById('search');
+  const addTaskBtn = document.getElementById('addTaskBtn');
+  const addColumnBtn = document.getElementById('addColumnBtn');
+  const exportAllWordBtn = document.getElementById('exportAllWordBtn');
+  const exportAllExcelBtn = document.getElementById('exportAllExcelBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const importFile = document.getElementById('importFile');
+  const importExcel = document.getElementById('importExcel');
+  const resetBtn = document.getElementById('resetBtn');
+  const switchBtn = document.getElementById('switchBtn');
+  const themeBtn = document.getElementById('themeBtn');
+  const bulletinBtn = document.getElementById('bulletinBtn');
+
+  const colTpl = document.getElementById('columnTemplate');
+  const taskTpl = document.getElementById('taskTemplate');
+
+  const modal = document.getElementById('taskModal');
+  const taskForm = document.getElementById('taskForm');
+  const modalTitle = document.getElementById('modalTitle');
+  const taskTitle = document.getElementById('taskTitle');
+  const taskNotes = document.getElementById('taskNotes');
+  const taskPriority = document.getElementById('taskPriority');
+  const taskFont = document.getElementById('taskFont');
+  const taskFontSize = document.getElementById('taskFontSize');
+  const taskFontColor = document.getElementById('taskFontColor');
+  const taskAttInput = document.getElementById('taskAttInput');
+  const taskAttPreview = document.getElementById('taskAttPreview');
+  const clearAtt = document.getElementById('clearAtt');
+  let modalCtx = { columnId:null, taskId:null };
+  let modalAttBuffer = [];
+
+  // Global task viewer modal
+  const gModal = document.getElementById('globalTaskModal');
+  const gTitle = document.getElementById('gTitle');
+  const gInfo = document.getElementById('gInfo');
+  const gNotes = document.getElementById('gNotes');
+  const gComments = document.getElementById('gComments');
+  const gCommentText = document.getElementById('gCommentText');
+  const gAddComment = document.getElementById('gAddComment');
+  let gCtx = { pageId:null, colId:null, taskId:null };
+
+  // Bulletin elements
+  const bulletinModal = document.getElementById('bulletinModal');
+  const bulletinInfo = document.getElementById('bulletinInfo');
+  const bulletinGlobalList = document.getElementById('bulletinGlobalList');
+  const bulletinToAdminList = document.getElementById('bulletinToAdminList');
+  const bulletinGlobalText = document.getElementById('bulletinGlobalText');
+  const bulletinToAdminText = document.getElementById('bulletinToAdminText');
+  const addBulletinGlobal = document.getElementById('addBulletinGlobal');
+  const addBulletinToAdmin = document.getElementById('addBulletinToAdmin');
+  const adminReplyRow = document.getElementById('adminReplyRow');
+  const bulletinReplyPage = document.getElementById('bulletinReplyPage');
+  const bulletinReplyText = document.getElementById('bulletinReplyText');
+  const sendReplyToBranch = document.getElementById('sendReplyToBranch');
+
+  // Utils
+  function lsGet(k){ try{ return localStorage.getItem(k); } catch { return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); } catch { /* ignore */ } }
+  function setTheme(mode){ document.documentElement.dataset.theme = mode; lsSet(THEME_KEY, mode); }
+  function show(el){ el.hidden=false; el.style.display=''; }
+  function hide(el){ el.hidden=true; el.style.display='none'; }
+  function uid(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3); }
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function sanitizeFilename(s){ return String(s||'file').replace(/[\\/:*?"<>|]/g,'_').slice(0,60); }
+
+  function createDefaultRoot(){
+    return { pages: {
+      admin: {id:'admin', name:'الصفحة الرئيسية (مسؤول)', role:'admin', enabled:true, password:'1234'},
+      p1: {id:'p1', name:'صفحة 1', role:'user', enabled:true, password:'1111'},
+      p2: {id:'p2', name:'صفحة 2', role:'user', enabled:true, password:'2222'},
+      p3: {id:'p3', name:'صفحة 3', role:'user', enabled:true, password:'3333'},
+      p4: {id:'p4', name:'صفحة 4', role:'user', enabled:true, password:'4444'},
+    }, active:'admin',
+    globalNotes: []
+  };
+  }
+  function ensurePageNotes(pid){ const p=root.pages[pid]; if(p && !p.notes) p.notes=[]; }
+  function createDefaultBoard(){
+    return { columns: [
+      { id: uid(), title: '📌 قيد التخطيط', color:'#0ea5e9', tasks: [ { id: uid(), title:'إنشاء المتطلبات', notes:'الأعمدة + المراحل + المرفقات + التعليقات', priority:'medium', created:Date.now(), style:{}, atts:[], comments:[] } ] },
+      { id: uid(), title: '⚙️ قيد التنفيذ', color:'#22c55e', tasks: [] },
+      { id: uid(), title: '✅ منجز',       color:'#a855f7', tasks: [] },
+    ] };
+  }
+
+  function loadRoot(){
+    const t = lsGet(ROOT_KEY);
+    if(!t){
+      root = createDefaultRoot();
+      lsSet(ROOT_KEY, JSON.stringify(root));
+      return;
+    }
+    try{
+      root = JSON.parse(t);
+      if(!root || !root.pages || typeof root.pages !== 'object' || !Object.keys(root.pages).length){
+        root = createDefaultRoot();
+        lsSet(ROOT_KEY, JSON.stringify(root));
+      }
+      if(!Array.isArray(root.globalNotes)) root.globalNotes=[];
+      Object.values(root.pages).forEach(p=>{ if(!Array.isArray(p.notes)) p.notes=[]; });
+    }catch{
+      root = createDefaultRoot();
+      lsSet(ROOT_KEY, JSON.stringify(root));
+    }
+  }
+  function saveRoot(){ lsSet(ROOT_KEY, JSON.stringify(root)); }
+  function loadBoard(pageId){ const t = lsGet(pageKey(pageId)); if(!t) return null; try{ const b=JSON.parse(t); return b; }catch{ return null; } }
+  function saveBoard(pageId, board){ lsSet(pageKey(pageId), JSON.stringify(board)); }
+
+  function fillPageSelect(){
+    pageSelect.innerHTML='';
+    let items = [];
+    if(root && root.pages){ items = Object.values(root.pages).filter(p=>p.enabled); }
+    if(items.length===0){
+      root = createDefaultRoot();
+      saveRoot();
+      items = Object.values(root.pages).filter(p=>p.enabled);
+      setStatus('تمت تهيئة الصفحات تلقائيًا (admin:1234, 1111/2222/3333/4444).');
+    }
+    for(const p of items){ const opt=document.createElement('option'); opt.value=p.id; opt.textContent=(p.role==='admin'? '🛡️ ':'')+p.name; pageSelect.appendChild(opt); }
+    pageSelect.value = (root.active && root.pages[root.active]?.enabled) ? root.active : (items[0]?.id || 'admin');
+  }
+
+  function setStatus(txt, err){ loginStatus.textContent = txt||''; loginStatus.style.color = err? '#fca5a5':'var(--muted)'; }
+
+  function openPage(pid){
+    activePageId = pid; root.active = pid; saveRoot();
+    state = loadBoard(pid) || createDefaultBoard();
+    hide(gateEl); show(appHeader); show(boardEl); show(hintEl);
+    const page = root.pages[pid]; document.getElementById('pageName').textContent = `الصفحة الحالية: ${page.name}${page.role==='admin'?' (مسؤول)':''}`;
+    const isAdmin = page.role==='admin';
+    adminPanel.hidden = !isAdmin; adminPanel.style.display = isAdmin ? '' : 'none';
+    globalPanel.hidden = !isAdmin; globalPanel.style.display = isAdmin ? '' : 'none';
+    ensurePageNotes(pid);
+    if(isAdmin){ renderAdminPanel(); buildGlobalSelect(); renderGlobal(); }
+    renderBanners();
+    render();
+  }
+
+  function logout(){ hide(appHeader); hide(boardEl); hide(hintEl); hide(globalPanel); show(gateEl); pagePassword.value=''; fillPageSelect(); }
+
+  function renderAdminPanel(){
+    adminGrid.innerHTML='';
+    Object.values(root.pages).forEach(p=>{
+      const card=document.createElement('div'); card.className='card';
+      card.innerHTML = `
+        <div class="muted">${p.role==='admin'?'🛡️ مسؤول':'👤 مستخدم'}</div>
+        <label>اسم الصفحة<input class="field" data-name value="${escapeHtml(p.name)}"></label>
+        <label>تفعيل الصفحة<select class="field" data-enabled ${p.id==='admin'?'disabled':''}><option value="true" ${p.enabled?'selected':''}>مفعلة</option><option value="false" ${!p.enabled?'selected':''}>معطلة</option></select></label>
+        <label>كلمة مرور جديدة<input class="field" data-pass type="password" placeholder="(اتركه فارغًا)" /></label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn accent" data-save>حفظ</button>
+          ${p.id!=='admin'?'<button class="btn danger" data-reset>إعادة ضبط الصفحة</button>':''}
+        </div>`;
+      card.querySelector('[data-save]').addEventListener('click', ()=>{
+        const name = card.querySelector('[data-name]').value.trim()||p.name;
+        const en = card.querySelector('[data-enabled]');
+        const enabled = en? en.value==='true' : p.enabled;
+        const pass = card.querySelector('[data-pass]').value;
+        p.name=name; p.enabled = p.id==='admin' ? true : enabled; if(pass) p.password=pass;
+        saveRoot(); alert('تم الحفظ'); fillPageSelect(); const cur=root.pages[activePageId]; document.getElementById('pageName').textContent = `الصفحة الحالية: ${cur.name}${cur.role==='admin'?' (مسؤول)':''}`; buildGlobalSelect(); renderGlobal();
+      });
+      const resetBtn = card.querySelector('[data-reset]');
+      if(resetBtn) resetBtn.addEventListener('click', ()=>{ if(!confirm('إعادة ضبط بيانات هذه الصفحة؟')) return; saveBoard(p.id, createDefaultBoard()); if(p.id===activePageId){ state = loadBoard(p.id); render(); } alert('تمت إعادة الضبط'); renderGlobal(); });
+      adminGrid.appendChild(card);
+    });
+  }
+
+  // ===== DnD helpers =====
+  function enableDropzone(zoneEl, toColumnId){
+    if(!zoneEl) return;
+    zoneEl.addEventListener('dragover', (e)=>{ e.preventDefault(); zoneEl.classList.add('dropzone'); e.dataTransfer.dropEffect='move'; });
+    zoneEl.addEventListener('dragleave', ()=> zoneEl.classList.remove('dropzone'));
+    zoneEl.addEventListener('drop', (e)=>{
+      e.preventDefault(); zoneEl.classList.remove('dropzone');
+      try{ const data = JSON.parse(e.dataTransfer.getData('text/plain')||'{}'); if(data && data.taskId && data.fromCol){ moveTask(data.fromCol, toColumnId, data.taskId); } }catch{}
+    });
+  }
+  function moveTaskArray(st, fromColId, toColId, taskId){
+    const from = st.columns.find(c=>c.id===fromColId);
+    const to   = st.columns.find(c=>c.id===toColId);
+    if(!from || !to) return false;
+    const idx = from.tasks.findIndex(t=>t.id===taskId); if(idx<0) return false;
+    const [task] = from.tasks.splice(idx,1);
+    to.tasks.unshift(task);
+    return true;
+  }
+  function moveTask(fromColId, toColId, taskId){ if(moveTaskArray(state, fromColId, toColId, taskId)){ persist(); render(); } }
+
+  // ===== Color & contrast =====
+  function hexToRgb(hex){ if(!hex) return {r:0,g:0,b:0}; let h=hex.replace('#',''); if(h.length===3){ h=h.split('').map(c=>c+c).join(''); } const int=parseInt(h,16); return { r:(int>>16)&255, g:(int>>8)&255, b:int&255 } }
+  function srgbToLin(c){ c/=255; return (c<=0.04045)? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }
+  function relLuminance(hex){ const {r,g,b}=hexToRgb(hex||'#000000'); const R=srgbToLin(r), G=srgbToLin(g), B=srgbToLin(b); return 0.2126*R + 0.7152*G + 0.0722*B; }
+  function contrastRatio(fg,bg){ const L1=Math.max(relLuminance(fg), relLuminance(bg))+0.05; const L2=Math.min(relLuminance(fg), relLuminance(bg))+0.05; return L1/L2; }
+  function bestForeground(bg){ const dark='#0f172a', light='#ffffff'; const cDark=contrastRatio(dark,bg), cLight=contrastRatio(light,bg); return (cDark>=cLight)? dark : light; }
+  function getEffectiveBg(task, col){ return (col && col.color) ? col.color : undefined; }
+  function applyTaskStyles(node, task, col){
+    const effective = getEffectiveBg(task, col);
+    if(effective){
+      node.style.removeProperty('background');
+      node.style.setProperty('background-color', effective, 'important');
+      const fg = bestForeground(effective);
+      node.style.color = fg;
+      node.style.borderColor = (fg==='#ffffff') ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.22)';
+      node.style.textShadow = (fg==='#0f172a') ? '0 1px 0 rgba(255,255,255,.35)' : '0 1px 0 rgba(0,0,0,.35)';
+      const pill = node.querySelector('[data-priority]');
+      if(pill){ pill.style.background = (fg==='#ffffff') ? 'rgba(255,255,255,.18)' : 'rgba(0,0,0,.22)'; pill.style.color = fg; pill.style.border = (fg==='#ffffff') ? '1px solid rgba(255,255,255,.25)' : '1px solid rgba(0,0,0,.25)'; }
+    } else {
+      node.style.removeProperty('background');
+      node.style.removeProperty('background-color');
+      node.style.removeProperty('text-shadow');
+      node.style.color = '';
+      node.style.borderColor = 'rgba(148,163,184,.2)';
+      const pill = node.querySelector('[data-priority]'); if(pill){ pill.style.background='rgba(148,163,184,.2)'; pill.style.color=''; pill.style.border=''; }
+    }
+    const f = (task.style||{});
+    const titleEl = node.querySelector('[data-title]');
+    const notesEl = node.querySelector('[data-notes]');
+    if(f.font) { titleEl.style.fontFamily=f.font; notesEl.style.fontFamily=f.font; }
+    else { titleEl.style.removeProperty('font-family'); notesEl.style.removeProperty('font-family'); }
+    if(f.size){ titleEl.style.fontSize = (f.size+2)+'px'; notesEl.style.fontSize = f.size+'px'; }
+    else { titleEl.style.removeProperty('font-size'); notesEl.style.removeProperty('font-size'); }
+    if(f.color){ titleEl.style.color=f.color; notesEl.style.color=f.color; }
+    else { titleEl.style.removeProperty('color'); notesEl.style.removeProperty('color'); }
+  }
+  function reapplyAllTaskColors(){
+    const nodes = boardEl.querySelectorAll('[data-task]');
+    nodes.forEach(node=>{
+      const tid = node.dataset.id; const cid = node.dataset.cid;
+      const col = state.columns.find(c=>c.id===cid);
+      const task = col?.tasks.find(t=>t.id===tid);
+      if(task) applyTaskStyles(node, task, col);
+    });
+  }
+
+  // ===== Render main board =====
+  function render(){
+    boardEl.innerHTML='';
+    state.columns.forEach(col=>{
+      const n = colTpl.content.firstElementChild.cloneNode(true);
+      n.dataset.id = col.id;
+      const titleEl = n.querySelector('.column-title'); titleEl.textContent = col.title; titleEl.addEventListener('blur',()=>{ const t=titleEl.textContent.trim()||'عمود'; if(t!==col.title){ col.title=t; persist(); render(); }});
+      const countEl = n.querySelector('.count');
+      const tasksEl = n.querySelector('[data-tasks]');
+      const colorInput = n.querySelector('[data-col-color]');
+      const clearBtn   = n.querySelector('[data-col-color-clear]');
+      if(colorInput){ colorInput.value = (col.color && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(col.color)) ? col.color : '#444444';
+        colorInput.addEventListener('input', ()=>{ col.color = colorInput.value; persist(); reapplyAllTaskColors(); }); }
+      if(clearBtn){ clearBtn.addEventListener('click', ()=>{ col.color = undefined; persist(); reapplyAllTaskColors(); }); }
+
+      n.querySelector('[data-add-task]').addEventListener('click', ()=> openTaskModal(col.id));
+      n.querySelector('[data-delete-col]').addEventListener('click', ()=>{ if(!confirm('حذف العمود وكل مهامه؟')) return; state.columns = state.columns.filter(c=>c.id!==col.id); persist(); render(); });
+      n.querySelector('[data-col-word]').addEventListener('click', ()=> exportColumnToWord(col));
+      n.querySelector('[data-col-excel]').addEventListener('click', ()=> exportColumnToExcel(col));
+
+      enableDropzone(tasksEl, col.id);
+
+      col.tasks.forEach(task=>{
+        const t = taskTpl.content.firstElementChild.cloneNode(true);
+        t.dataset.id = task.id; t.dataset.cid = col.id;
+        t.querySelector('[data-title]').textContent = task.title;
+        t.querySelector('[data-notes]').textContent = task.notes||'';
+        t.querySelector('[data-created]').textContent = new Date(task.created).toLocaleDateString('ar-JO',{year:'numeric',month:'short',day:'numeric'});
+        const pr = t.querySelector('[data-priority]'); const map={low:['منخفضة','low'],medium:['متوسطة','med'],high:['مرتفعة','high']}; pr.textContent=map[task.priority][0]; pr.classList.add('pill',map[task.priority][1]);
+        applyTaskStyles(t, task, col);
+
+        // Render attachments (inline)
+        const attsWrap = t.querySelector('[data-atts]'); attsWrap.innerHTML='';
+        (task.atts||[]).forEach(a=>{
+          const el=document.createElement('a'); el.className='att'; el.href = a.dataUrl; el.target='_blank'; el.rel='noopener'; el.title = `${a.name} ( ${(a.size/1024).toFixed(0)} KB )`;
+          if(a.type && a.type.startsWith('image/')){ const img=new Image(); img.src=a.dataUrl; img.alt=a.name; el.appendChild(img); }
+          el.appendChild(document.createTextNode(a.type==='application/pdf'?'📄 PDF':'📎 '+a.name));
+          attsWrap.appendChild(el);
+        });
+        const attachBtn = t.querySelector('[data-attach-btn]');
+        const attachInput = t.querySelector('[data-attach-input]');
+        attachBtn.addEventListener('click', ()=> attachInput.click());
+        attachInput.addEventListener('change', async ()=>{ const files = attachInput.files; if(!files || !files.length) return; const newOnes = await readFilesToDataUrls(files); task.atts = (task.atts||[]).concat(newOnes); persist(); render(); });
+
+        // Comments toggle + render
+        const box = t.querySelector('[data-comments]');
+        const list = t.querySelector('[data-comments-list]');
+        const txt = t.querySelector('[data-comment-text]');
+        t.querySelector('[data-toggle-comments]').addEventListener('click', ()=>{ box.style.display = box.style.display==='none' ? '' : 'none'; });
+        t.querySelector('[data-add-comment]').addEventListener('click', ()=>{ const v=(txt.value||'').trim(); if(!v) return; addComment(activePageId, col.id, task.id, v); txt.value=''; render(); });
+        renderComments(list, task.comments||[]);
+
+        t.querySelector('[data-edit]').addEventListener('click', ()=> openTaskModal(col.id, task.id));
+        t.querySelector('[data-delete]').addEventListener('click', ()=>{ if(!confirm('حذف هذه المهمة؟')) return; col.tasks = col.tasks.filter(tt=>tt.id!==task.id); persist(); render(); });
+        t.querySelector('[data-export-doc]').addEventListener('click', ()=> exportTaskToWord(task, col.color));
+        t.querySelector('[data-export-xls]').addEventListener('click', ()=> exportTaskToExcel(task, col.color));
+        t.addEventListener('dragstart',(e)=>{ e.dataTransfer.setData('text/plain', JSON.stringify({taskId:task.id, fromCol:col.id})); e.dataTransfer.effectAllowed='move'; t.classList.add('ghost'); });
+        t.addEventListener('dragend',()=> t.classList.remove('ghost'));
+        tasksEl.appendChild(t);
+      });
+
+      countEl.textContent = col.tasks.length;
+      boardEl.appendChild(n);
+    });
+    applySearch(); reapplyAllTaskColors(); persist();
+  }
+
+  function renderComments(container, comments){
+    container.innerHTML = '';
+    (comments||[]).forEach(c=>{
+      const div=document.createElement('div'); div.className='comment';
+      div.innerHTML = `<div>${escapeHtml(c.text)}</div><small>${new Date(c.created).toLocaleString('ar-JO')}</small>`;
+      container.appendChild(div);
+    });
+  }
+
+  function addComment(pageId, colId, taskId, text){
+    const board = loadBoard(pageId); if(!board) return;
+    const col = board.columns.find(c=>c.id===colId); if(!col) return;
+    const task = col.tasks.find(t=>t.id===taskId); if(!task) return;
+    task.comments = task.comments||[]; task.comments.push({ id: uid(), text, created: Date.now() });
+    saveBoard(pageId, board);
+    if(pageId===activePageId){ state = board; }
+  }
+
+  function persist(){ saveBoard(activePageId, state); renderBanners(); }
+
+  // ===== Modal & tasks =====
+  function openTaskModal(columnId, taskId){
+    modalCtx = { columnId, taskId: taskId||null };
+    const col = state.columns.find(c=>c.id===columnId);
+    const task = taskId ? (col?.tasks.find(t=>t.id===taskId)) : null;
+    modalAttBuffer = []; taskAttPreview.innerHTML='';
+    if(task){
+      modalTitle.textContent='تعديل مهمة';
+      taskTitle.value=task.title||''; taskNotes.value=task.notes||''; taskPriority.value=task.priority||'medium';
+      taskFont.value = task.style?.font || '';
+      taskFontSize.value = task.style?.size || '';
+      taskFontColor.value = task.style?.color || '#e5e7eb';
+      (task.atts||[]).forEach(a=> addAttPreview(a));
+    } else {
+      modalTitle.textContent='مهمة جديدة';
+      taskTitle.value=''; taskNotes.value=''; taskPriority.value='medium';
+      taskFont.value=''; taskFontSize.value=''; taskFontColor.value='#e5e7eb';
+    }
+    modal.showModal(); setTimeout(()=>taskTitle.focus(),30);
+  }
+  function addColumn(title){ state.columns.push({ id: uid(), title: title||`عمود ${state.columns.length+1}`, tasks: [] }); persist(); render(); }
+
+  taskForm.addEventListener('submit', (e)=>{ e.preventDefault(); saveTaskFromModal(); });
+  function saveTaskFromModal(){
+    const title = taskTitle.value.trim(); if(!title) return;
+    const notes = taskNotes.value.trim(); const priority = /** @type {'low'|'medium'|'high'} */ (taskPriority.value);
+    const style = { font: taskFont.value||undefined, size: taskFontSize.value? Number(taskFontSize.value) : undefined, color: taskFontColor.value||undefined };
+    const col = state.columns.find(c=>c.id===modalCtx.columnId); if(!col){ modal.close(); return; }
+    const newAtts = modalAttBuffer.slice();
+    if(modalCtx.taskId){ const i = col.tasks.findIndex(t=>t.id===modalCtx.taskId); if(i>=0){ const ex = col.tasks[i]; const merged = (ex.atts||[]).concat(newAtts); col.tasks[i] = Object.assign({}, ex, {title,notes,priority,style, atts: merged}); } }
+    else { col.tasks.unshift({ id: uid(), title, notes, priority, created: Date.now(), style, atts: newAtts, comments: [] }); }
+    persist(); render(); modal.close();
+  }
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modal.open) modal.close(); if(e.key==='Escape' && gModal.open) gModal.close(); if(e.key==='Escape' && bulletinModal.open) bulletinModal.close(); });
+
+  function applySearch(){ const q=(searchEl.value||'').trim().toLowerCase(); boardEl.querySelectorAll('[data-task]').forEach(card=>{ const t=card.querySelector('[data-title]').textContent.toLowerCase(); const n=card.querySelector('[data-notes]').textContent.toLowerCase(); card.style.display = (!q || t.includes(q) || n.includes(q)) ? '' : 'none'; }); }
+
+  // ===== Export helpers =====
+  function downloadBlob(blob, name){ const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),500); }
+  function spreadsheetML(sheetName, rows){
+    const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    let xml = `<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">\n  <Worksheet ss:Name="${esc((sheetName||'Sheet').slice(0,28))}">\n    <Table>`;
+    rows.forEach(r=>{ xml += `\n      <Row>` + r.map(v=>`<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>`).join('') + `</Row>`; });
+    xml += `\n    </Table>\n  </Worksheet>\n</Workbook>`;
+    return xml;
+  }
+
+  function exportTaskToWord(task, colColor){
+    const chosen = colColor;
+    const style = task.style||{};
+    const tTitle = `<h1 style="${style.font?`font-family:${style.font};`:''}${style.size?`font-size:${style.size+2}px;`:''}${style.color?`color:${style.color};`:''}">${escapeHtml(task.title)}</h1>`;
+    const tNotes = task.notes? `<p style="${style.font?`font-family:${style.font};`:''}${style.size?`font-size:${style.size}px;`:''}${style.color?`color:${style.color};`:''}">${escapeHtml(task.notes).replace(/\n/g,'<br>')}</p>` : '';
+    const html = `<!DOCTYPE html><html lang='ar' dir='rtl'><head><meta charset='utf-8'><title>${escapeHtml(task.title)}</title></head><body style='font-family:Segoe UI,Tahoma'>${tTitle}<p><strong>الأولوية:</strong> ${task.priority==='high'?'مرتفعة':task.priority==='medium'?'متوسطة':'منخفضة'}</p><p><strong>تاريخ الإنشاء:</strong> ${new Date(task.created).toLocaleString('ar-JO')}</p>${chosen?`<p><strong>لون العمود:</strong> <span style='background:${chosen};padding:0 6px;border:1px solid #ccc'>${chosen}</span></p>`:''}${tNotes}${(task.atts&&task.atts.length)?`<h3>مرفقات (${task.atts.length})</h3><ul>`+task.atts.map(a=>`<li>${escapeHtml(a.name)} — ${a.type}</li>`).join('')+`</ul>`:''}${(task.comments&&task.comments.length)?`<h3>تعليقات (${task.comments.length})</h3><ul>`+task.comments.map(c=>`<li>${escapeHtml(c.text)} — ${new Date(c.created).toLocaleString('ar-JO')}</li>`).join('')+`</ul>`:''}</body></html>`;
+    downloadBlob(new Blob([html],{type:'application/msword'}), `${sanitizeFilename(task.title)}.doc`);
+  }
+  function exportTaskToExcel(task, colColor){
+    const rows = [[
+      'العنوان','الملاحظات','الأولوية','تاريخ الإنشاء','لون العمود','المرفقات','تعليقات','خط','حجم','لون'
+    ], [
+      task.title,
+      task.notes||'',
+      task.priority==='high'?'مرتفعة':task.priority==='medium'?'متوسطة':'منخفضة',
+      new Date(task.created).toLocaleString('ar-JO'),
+      colColor||'',
+      (task.atts||[]).map(a=>a.name).join(', '),
+      (task.comments||[]).map(c=>c.text).join(' | '),
+      task.style?.font||'', String(task.style?.size||''), task.style?.color||''
+    ]];
+    const xml = spreadsheetML('Task', rows);
+    downloadBlob(new Blob([xml],{type:'application/vnd.ms-excel'}), `${sanitizeFilename(task.title)}.xls`);
+  }
+  function exportColumnToWord(col){
+    let html = `<!DOCTYPE html><html lang='ar' dir='rtl'><head><meta charset='utf-8'><title>${escapeHtml(col.title)}</title></head><body style='font-family:Segoe UI,Tahoma'><h1>${escapeHtml(col.title)}</h1>`;
+    if(!col.tasks.length){ html += '<p>لا توجد مهام.</p>'; }
+    else {
+      html += `<table border='1' cellspacing='0' cellpadding='6' style='border-collapse:collapse;width:100%'><tr><th>العنوان</th><th>الأولوية</th><th>التاريخ</th><th>لون العمود</th><th>الملاحظات</th><th>المرفقات</th><th>التعليقات</th><th>الخط</th><th>الحجم</th><th>اللون</th></tr>`;
+      col.tasks.forEach(t=>{
+        html += `<tr><td>${escapeHtml(t.title)}</td><td>${t.priority==='high'?'مرتفعة':t.priority==='medium'?'متوسطة':'منخفضة'}</td><td>${new Date(t.created).toLocaleString('ar-JO')}</td><td>${col.color?`<span style='background:${col.color};padding:0 6px;border:1px solid #ccc'>${col.color}</span>`:''}</td><td>${escapeHtml(t.notes||'').replace(/\n/g,'<br>')}</td><td>${(t.atts||[]).map(a=>escapeHtml(a.name)).join(', ')}</td><td>${(t.comments||[]).map(c=>escapeHtml(c.text)).join(' | ')}</td><td>${escapeHtml(t.style?.font||'')}</td><td>${String(t.style?.size||'')}</td><td>${escapeHtml(t.style?.color||'')}</td></tr>`;
+      });
+      html += '</table>';
+    }
+    html += '</body></html>';
+    downloadBlob(new Blob([html],{type:'application/msword'}), `${sanitizeFilename(col.title)}.doc`);
+  }
+  function exportColumnToExcel(col){
+    const rows = [['العنوان','الأولوية','تاريخ الإنشاء','لون العمود','الملاحظات','المرفقات','التعليقات','الخط','الحجم','اللون']];
+    col.tasks.forEach(t=> {
+      rows.push([
+        t.title,
+        t.priority==='high'?'مرتفعة':t.priority==='medium'?'متوسطة':'منخفضة',
+        new Date(t.created).toLocaleString('ar-JO'),
+        col.color||'',
+        t.notes||'',
+        (t.atts||[]).map(a=>a.name).join(', '),
+        (t.comments||[]).map(c=>c.text).join(' | '),
+        t.style?.font||'', String(t.style?.size||''), t.style?.color||''
+      ]);
+    });
+    const xml = spreadsheetML(col.title, rows);
+    downloadBlob(new Blob([xml],{type:'application/vnd.ms-excel'}), `${sanitizeFilename(col.title)}.xls`);
+  }
+  function exportAllToWord(){
+    let html = `<!DOCTYPE html><html lang='ar' dir='rtl'><head><meta charset='utf-8'><title>لوحة المهام والاعمال — جميع الأعمدة</title></head><body style='font-family:Segoe UI,Tahoma'>`;
+    state.columns.forEach(c=>{
+      html += `<h2>${escapeHtml(c.title)}</h2>`;
+      if(!c.tasks.length){ html += '<p>لا توجد مهام.</p>'; }
+      else {
+        html += `<table border='1' cellspacing='0' cellpadding='6' style='border-collapse:collapse;width:100%'><tr><th>العمود</th><th>العنوان</th><th>الأولوية</th><th>التاريخ</th><th>لون العمود</th><th>الملاحظات</th><th>المرفقات</th><th>التعليقات</th><th>الخط</th><th>الحجم</th><th>اللون</th></tr>`;
+        c.tasks.forEach(t=>{
+          html += `<tr><td>${escapeHtml(c.title)}</td><td>${escapeHtml(t.title)}</td><td>${t.priority==='high'?'مرتفعة':t.priority==='medium'?'متوسطة':'منخفضة'}</td><td>${new Date(t.created).toLocaleString('ar-JO')}</td><td>${c.color?`<span style='background:${c.color};padding:0 6px;border:1px solid #ccc'>${c.color}</span>`:''}</td><td>${escapeHtml(t.notes||'').replace(/\n/g,'<br>')}</td><td>${(t.atts||[]).map(a=>escapeHtml(a.name)).join(', ')}</td><td>${(t.comments||[]).map(c=>escapeHtml(c.text)).join(' | ')}</td><td>${escapeHtml(t.style?.font||'')}</td><td>${String(t.style?.size||'')}</td><td>${escapeHtml(t.style?.color||'')}</td></tr>`;
+        });
+        html += '</table>';
+      }
+    });
+    html += '</body></html>';
+    downloadBlob(new Blob([html],{type:'application/msword'}), 'kanban-all.doc');
+  }
+  function exportAllToExcel(){
+    const rows = [['العمود','العنوان','الأولوية','تاريخ الإنشاء','لون العمود','الملاحظات','المرفقات','التعليقات','الخط','الحجم','اللون']];
+    state.columns.forEach(c=> c.tasks.forEach(t=> {
+      rows.push([
+        c.title,
+        t.title,
+        t.priority==='high'?'مرتفعة':t.priority==='medium'?'متوسطة':'منخفضة',
+        new Date(t.created).toLocaleString('ar-JO'),
+        c.color||'',
+        t.notes||'',
+        (t.atts||[]).map(a=>a.name).join(', '),
+        (t.comments||[]).map(c=>c.text).join(' | '),
+        t.style?.font||'', String(t.style?.size||''), t.style?.color||''
+      ]);
+    }));
+    const xml = spreadsheetML('AllTasks', rows);
+    downloadBlob(new Blob([xml],{type:'application/vnd.ms-excel'}),'kanban-all.xls');
+  }
+
+  // ===== Excel/CSV import =====
+  function parseCSV(text){
+    const rows=[]; let cur=''; let row=[]; let q=false; for(let i=0;i<text.length;i++){ const ch=text[i]; if(ch==='"'){ if(q && text[i+1]==='"'){ cur+='"'; i++; } else { q=!q; } } else if(ch===',' && !q){ row.push(cur); cur=''; } else if((ch==='\n' || ch==='\r') && !q){ if(cur!==''||row.length){ row.push(cur); rows.push(row); row=[]; cur=''; } } else { cur+=ch; } } if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+    return rows.filter(r=>r.length && r.some(c=>String(c).trim()!==''));
+  }
+  function parseSpreadsheetML(xmlText){
+    const doc=new DOMParser().parseFromString(xmlText,'text/xml');
+    const rows=[...doc.getElementsByTagName('Row')].map(r=>[...r.getElementsByTagName('Data')].map(d=>d.textContent||''));
+    return rows;
+  }
+  function normalizeHeader(h){ return String(h||'').trim().replace(/\s+/g,''); }
+  function handleExcelImport(e){
+    const f=e.target.files?.[0]; if(!f) return; const name=(f.name||'').toLowerCase();
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        let rows=[];
+        const txt=String(reader.result||'');
+        if(name.endsWith('.csv')) rows=parseCSV(txt);
+        else rows=parseSpreadsheetML(txt);
+        if(!rows.length) throw new Error('لا توجد صفوف');
+        const headers=rows[0].map(normalizeHeader);
+        const idx={
+          col: headers.findIndex(h=>['العمود','column','عمود'].includes(h)),
+          title: headers.findIndex(h=>['العنوان','title','اسمالمهمة'].includes(h)),
+          notes: headers.findIndex(h=>['الملاحظات','notes'].includes(h)),
+          pr: headers.findIndex(h=>['الأولوية','priority','اولوية'].includes(h))
+        };
+        if(idx.title<0) throw new Error('يلزم عمود "العنوان"');
+        const defaultColId = state.columns[0]?.id || (addColumn('عمود 1'), state.columns[0].id);
+        for(let i=1;i<rows.length;i++){
+          const r=rows[i]; if(!r || !r.length) continue;
+          const title=(r[idx.title]||'').trim(); if(!title) continue;
+          const notes=(idx.notes>=0? r[idx.notes]:'')||'';
+          const prRaw=String(idx.pr)>=0? String(r[idx.pr]||'').toLowerCase() : '';
+          const pr= prRaw.includes('high')||prRaw.includes('مرتف')? 'high' : prRaw.includes('low')||prRaw.includes('منخفض')? 'low' : 'medium';
+          let colId=defaultColId;
+          if(idx.col>=0){ const colTitle=(r[idx.col]||'').trim(); if(colTitle){ let col=state.columns.find(c=>c.title===colTitle); if(!col){ col={id:uid(), title:colTitle, tasks:[]}; state.columns.push(col); } colId=col.id; } }
+          const col=state.columns.find(c=>c.id===colId); col.tasks.unshift({ id:uid(), title, notes, priority:pr||'medium', created:Date.now(), style:{}, atts:[], comments:[] });
+        }
+        persist(); render(); alert('تم استيراد المهام من الملف.'); e.target.value='';
+      }catch(err){ alert('تعذر الاستيراد: '+err.message); }
+    };
+    reader.onerror=()=> alert('فشل قراءة الملف');
+    reader.readAsText(f, 'utf-8');
+  }
+
+  // ===== Attachments helpers =====
+  function readFilesToDataUrls(fileList){
+    const files = Array.from(fileList||[]);
+    return Promise.all(files.map(f=> new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res({ id:uid(), name:f.name, type:f.type, size:f.size, dataUrl:String(r.result) }); r.onerror=()=>rej(r.error||new Error('read error')); r.readAsDataURL(f); })));
+  }
+  function addAttPreview(att){
+    const el=document.createElement('a'); el.className='att'; el.href=att.dataUrl; el.target='_blank'; el.rel='noopener'; el.title = `${att.name} ( ${(att.size/1024).toFixed(0)} KB )`;
+    if(att.type && att.type.startsWith('image/')){ const img=new Image(); img.src=att.dataUrl; img.alt=att.name; el.appendChild(img); }
+    el.appendChild(document.createTextNode(att.type==='application/pdf'?'📄 PDF':'📎 '+att.name));
+    taskAttPreview.appendChild(el);
+  }
+
+  // ===== Global (admin) =====
+  function buildGlobalSelect(){
+    globalPageSel.innerHTML='';
+    const items = Object.values(root.pages).filter(p=>p.enabled && p.id!=='admin');
+    const optAll=document.createElement('option'); optAll.value='__all__'; optAll.textContent='كل الصفحات'; globalPageSel.appendChild(optAll);
+    items.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; globalPageSel.appendChild(o); });
+  }
+
+  function renderGlobal(){
+    const sel = globalPageSel.value||'__all__';
+    const pages = Object.values(root.pages).filter(p=>p.enabled && p.id!=='admin' && (sel==='__all__' || sel===p.id));
+    let html='';
+    pages.forEach(p=>{
+      const b = loadBoard(p.id) || {columns:[]};
+      html += `<h4 style="margin:6px 0">${escapeHtml(p.name)}</h4>`;
+      if(!b.columns.length){ html += '<div class="muted">لا بيانات</div>'; return; }
+      html += '<table><thead><tr><th>العمود</th><th>العنوان</th><th>الأولوية</th><th>تاريخ</th><th>مرفقات</th><th>تعليقات</th><th>إجراء</th></tr></thead><tbody>';
+      b.columns.forEach(c=> c.tasks.forEach(t=>{
+        html += `<tr><td>${escapeHtml(c.title)}</td><td>${escapeHtml(t.title)}</td><td>${t.priority}</td><td>${new Date(t.created).toLocaleDateString('ar-JO')}</td><td>${(t.atts||[]).length}</td><td>${(t.comments||[]).length}</td><td><button class='btn' data-view data-page='${p.id}' data-col='${c.id}' data-task='${t.id}'>👁️ عرض</button></td></tr>`;
+      }));
+      html += '</tbody></table>';
+    });
+    globalTableWrap.innerHTML = html || '<div class="muted">لا توجد صفحات لعرضها</div>';
+    globalTableWrap.querySelectorAll('[data-view]').forEach(btn=> btn.addEventListener('click', ()=> openGlobalTask(btn.dataset.page, btn.dataset.col, btn.dataset.task)));
+  }
+
+  function openGlobalTask(pageId, colId, taskId){
+    const b = loadBoard(pageId); if(!b) return;
+    const c = b.columns.find(x=>x.id===colId); if(!c) return;
+    const t = c.tasks.find(x=>x.id===taskId); if(!t) return;
+    gCtx = { pageId, colId, taskId };
+    gTitle.textContent = t.title;
+    gInfo.textContent = `${root.pages[pageId]?.name || pageId} — ${c.title} — ${new Date(t.created).toLocaleString('ar-JO')}`;
+    gNotes.innerHTML = t.notes ? `<strong>ملاحظات:</strong> ${escapeHtml(t.notes).replace(/\n/g,'<br>')}` : '';
+    gComments.innerHTML='';
+    renderComments(gComments, t.comments||[]);
+    gModal.showModal();
+  }
+
+  gAddComment.addEventListener('click', ()=>{
+    const v=(gCommentText.value||'').trim(); if(!v) return;
+    addComment(gCtx.pageId, gCtx.colId, gCtx.taskId, v);
+    gCommentText.value='';
+    openGlobalTask(gCtx.pageId, gCtx.colId, gCtx.taskId);
+    if(gCtx.pageId===activePageId) render();
+  });
+
+  refreshGlobalBtn.addEventListener('click', renderGlobal);
+  globalPageSel.addEventListener('change', renderGlobal);
+
+  // ===== Bulletin logic =====
+  function renderBanners(){
+    if(!root) return; ensurePageNotes(activePageId);
+    const page = root.pages[activePageId];
+
+    const latestGlobal = [...(root.globalNotes||[])].sort((a,b)=>b.created-a.created)[0];
+    if(latestGlobal){
+      bannerGlobal.style.display='';
+      bannerGlobal.innerHTML = `<strong>📣 من الصفحة الرئيسية:</strong> ${escapeHtml(latestGlobal.text)} <small class=\"muted\">${new Date(latestGlobal.created).toLocaleString('ar-JO')}</small>`;
+    } else { bannerGlobal.style.display='none'; }
+
+    const toAdminAll = Object.values(root.pages).flatMap(p=> (p.id!=='admin') ? (p.notes||[]).map(n=>({...n,pageId:p.id,name:p.name})) : []);
+    const latestToAdmin = toAdminAll.sort((a,b)=>b.created-a.created)[0];
+    if(root.active==='admin' && latestToAdmin){
+      bannerToAdmin.style.display='';
+      bannerToAdmin.innerHTML = `<strong>↩︎ من ${escapeHtml(latestToAdmin.name)}:</strong> ${escapeHtml(latestToAdmin.text)} <small class=\"muted\">${new Date(latestToAdmin.created).toLocaleString('ar-JO')}</small>`;
+    } else { bannerToAdmin.style.display='none'; }
+
+    if(page.role!=='admin'){
+      const replies = (page.notes||[]).filter(n=>n.author==='admin');
+      const latestReply = replies.sort((a,b)=>b.created-a.created)[0];
+      if(latestReply){
+        bannerFromAdminToBranch.style.display='';
+        bannerFromAdminToBranch.innerHTML = `<strong>📩 رد من الصفحة الرئيسية:</strong> ${escapeHtml(latestReply.text)} <small class=\"muted\">${new Date(latestReply.created).toLocaleString('ar-JO')}</small>`;
+      } else { bannerFromAdminToBranch.style.display='none'; }
+    } else { bannerFromAdminToBranch.style.display='none'; }
+
+    banners.style.display = (bannerGlobal.style.display!=="none" || bannerToAdmin.style.display!=="none" || bannerFromAdminToBranch.style.display!=="none") ? '' : 'none';
+  }
+  function openBulletin(){
+    ensurePageNotes(activePageId);
+    const current = root.pages[activePageId];
+    bulletinInfo.textContent = `الصفحة الحالية: ${current.name}${current.role==='admin'?' (مسؤول)':''}`;
+    renderComments(bulletinGlobalList, (root.globalNotes||[]));
+    renderComments(bulletinToAdminList, (root.pages[activePageId].notes||[]));
+    if(current.role==='admin'){
+      adminReplyRow.style.display='grid';
+      bulletinReplyPage.innerHTML='';
+      Object.values(root.pages).filter(p=>p.id!=='admin' && p.enabled).forEach(p=>{
+        const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; bulletinReplyPage.appendChild(o);
+      });
+    } else { adminReplyRow.style.display='none'; }
+    bulletinModal.showModal();
+  }
+  function addBulletin(type){
+    if(type==='global'){
+      if(root.pages[activePageId].role!=='admin'){ alert('إضافة تعليق عام متاحة من الصفحة الرئيسية فقط'); return; }
+      const v=(bulletinGlobalText.value||'').trim(); if(!v) return;
+      root.globalNotes.push({id:uid(), text:v, created:Date.now(), author:'admin'}); saveRoot(); bulletinGlobalText.value='';
+    } else if(type==='local') {
+      const v=(bulletinToAdminText.value||'').trim(); if(!v) return; ensurePageNotes(activePageId); root.pages[activePageId].notes.push({id:uid(), text:v, created:Date.now(), author:'branch'}); saveRoot(); bulletinToAdminText.value='';
+    } else if(type==='reply'){
+      const pid=bulletinReplyPage.value; const v=(bulletinReplyText.value||'').trim(); if(!pid||!v) return; ensurePageNotes(pid); root.pages[pid].notes.push({id:uid(), text:v, created:Date.now(), author:'admin'}); saveRoot(); bulletinReplyText.value='';
+    }
+    renderBanners(); openBulletin();
+  }
+
+  addBulletinGlobal.addEventListener('click', ()=> addBulletin('global'));
+  addBulletinToAdmin.addEventListener('click', ()=> addBulletin('local'));
+  sendReplyToBranch.addEventListener('click', ()=> addBulletin('reply'));
+
+  // ===== Bindings =====
+  function handleLogin(){
+    try{
+      setStatus('جارٍ التحقق...');
+      if(!root){ loadRoot(); }
+      if(!pageSelect.options.length){ fillPageSelect(); }
+      const pid = pageSelect?.value; const pass = pagePassword?.value||'';
+      if(!pid){ setStatus('الصفحة غير محددة', true); return; }
+      const page = root.pages[pid];
+      if(!page){ setStatus('الصفحة غير موجودة', true); return; }
+      if(!page.enabled){ setStatus('الصفحة معطلة', true); return; }
+      if(pass !== page.password){ setStatus('كلمة المرور غير صحيحة', true); return; }
+      setStatus('تم الدخول');
+      openPage(pid);
+    }catch(err){ console.error('LOGIN ERROR', err); setStatus('حدث خطأ أثناء الدخول: '+err, true); }
+  }
+
+  function bindUI(){
+    loginForm.addEventListener('submit', (e)=>{ e.preventDefault(); handleLogin(); });
+    loginBtn.addEventListener('click', (e)=>{ e.preventDefault(); handleLogin(); });
+    pagePassword.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); handleLogin(); } });
+    pageSelect.addEventListener('change', ()=> pagePassword.focus());
+    lightBtn.addEventListener('click', ()=> setTheme(document.documentElement.dataset.theme==='light'?'':'light'));
+    themeBtn.addEventListener('click', ()=> setTheme(document.documentElement.dataset.theme==='light'?'':'light'));
+    switchBtn.addEventListener('click', logout);
+    addTaskBtn.addEventListener('click', ()=>{ const first = state?.columns?.[0]?.id; if(first) openTaskModal(first); else addColumn('عمود'); });
+    addColumnBtn.addEventListener('click', ()=>{ const t = prompt('اسم العمود؟', `عمود ${state? state.columns.length+1:1}`); if(t) addColumn(t.trim()); });
+    exportAllWordBtn.addEventListener('click', exportAllToWord);
+    exportAllExcelBtn.addEventListener('click', exportAllToExcel);
+    exportBtn.addEventListener('click', ()=> downloadBlob(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}), `kanban-${sanitizeFilename(root.pages[activePageId].name)}.json`));
+    importFile.addEventListener('change', (e)=>{ const f=e.target.files[0]; if(!f) return; f.text().then(txt=>{ try{ const data=JSON.parse(txt); if(!data||!Array.isArray(data.columns)) throw new Error('صيغة غير صالحة'); state={ columns: data.columns.map(c=>({ id:c.id||uid(), title:String(c.title||'عمود'), color:c.color||undefined, tasks:Array.isArray(c.tasks)? c.tasks.map(t=>({ id:t.id||uid(), title:String(t.title||'مهمة'), notes:String(t.notes||''), priority:(['low','medium','high'].includes(t.priority)? t.priority:'medium'), created:Number(t.created||Date.now()), style:t.style||{}, atts:Array.isArray(t.atts)? t.atts.filter(a=>a && a.dataUrl):[], comments:Array.isArray(t.comments)? t.comments.filter(c=>c && c.text):[] })) : [] })) }; persist(); render(); }catch(ex){ alert('ملف غير صالح: '+ex.message); } }); });
+    resetBtn.addEventListener('click', ()=>{ if(!confirm('إعادة ضبط هذه الصفحة فقط؟')) return; state=createDefaultBoard(); persist(); render(); });
+    searchEl.addEventListener('input', applySearch);
+
+    importExcel.addEventListener('change', handleExcelImport);
+  }
+
+  // ===== Init =====
+  document.addEventListener('DOMContentLoaded', function(){
+    try{
+      const th = lsGet(THEME_KEY); if(th==='light') setTheme('light');
+      loadRoot();
+      fillPageSelect();
+      pagePassword.focus();
+      window.addEventListener('error', (e)=>{ const el=document.getElementById('appStatus')||loginStatus; if(el){ el.textContent = '⚠︎ خطأ: '+ (e?.error?.message||e?.message||'غير معروف'); el.style.color='#fca5a5'; } });
+      window.addEventListener('unhandledrejection', (e)=>{ const el=document.getElementById('appStatus')||loginStatus; if(el){ el.textContent = '⚠︎ خطأ (وعد غير معالج): '+ (e?.reason?.message||e?.reason||''); el.style.color='#fca5a5'; } });
+      const obs = new MutationObserver(()=> reapplyAllTaskColors()); obs.observe(boardEl, { childList:true, subtree:true });
+      bindUI();
+      runTests();
+      setStatus('جاهز للدخول');
+    }catch(err){ const el=document.getElementById('appStatus')||loginStatus; if(el){ el.textContent='⚠︎ فشل التهيئة: '+err; el.style.color='#fca5a5'; } }
+  });
+
+  // ===== Minimal tests =====
+  function runTests(){
+    const log=(name,ok,msg='')=>{ console[ok?'log':'error'](`TEST ${ok?'✓':'✗'} ${name}${msg?' — '+msg:''}`); };
+    log('enableDropzone defined', typeof enableDropzone==='function');
+    const A=uid(), B=uid(); const t1={id:uid(),title:'T1',priority:'low',created:Date.now()}, t2={id:uid(),title:'T2',priority:'low',created:Date.now()};
+    const st={columns:[{id:A,title:'A',tasks:[t1,t2]},{id:B,title:'B',tasks:[]}]};
+    const ok2 = moveTaskArray(st,A,B,t2.id) && st.columns[1].tasks[0]===t2 && st.columns[0].tasks.length===1; log('moveTaskArray basic', ok2);
+    const xml = spreadsheetML('Sheet', [['a','b'],['c','d']]); log('spreadsheetML string', typeof xml==='string' && xml.includes('<Worksheet'));
+    const backup = lsGet(ROOT_KEY);
+    try { localStorage.removeItem(ROOT_KEY); loadRoot(); let parsed = JSON.parse(lsGet(ROOT_KEY)); log('auto init root', !!(parsed && parsed.pages && parsed.pages.admin)); parsed.pages = {}; lsSet(ROOT_KEY, JSON.stringify(parsed)); loadRoot(); fillPageSelect(); log('auto init pages select', pageSelect.options.length>0); } catch (e) { log('auto init tests exception', false, String(e)); } finally { if(backup) lsSet(ROOT_KEY, backup); }
+    const col={id:'c',title:'C',color:'#0ea5e9',tasks:[]}; const task={id:'t',title:'T',created:Date.now(),priority:'medium',style:{font:'Tahoma',size:16,color:'#fff'}}; const dummy=document.createElement('div'); dummy.innerHTML='<div data-title></div><div data-notes></div><div data-priority></div>'; applyTaskStyles(dummy,task,col); log('applyTaskStyles uses column color only', getComputedStyle(dummy).backgroundColor!=='');
+    const csvRows=parseCSV('العمود,العنوان,الأولوية\nA,مهمة,high'); log('parseCSV rows', Array.isArray(csvRows)&&csvRows.length===2);
+    const xmlSample = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="S"><Table><Row><Cell><Data ss:Type="String">العنوان</Data></Cell></Row><Row><Cell><Data ss:Type="String">X</Data></Cell></Row></Table></Worksheet></Workbook>'; const xmlRows = parseSpreadsheetML(xmlSample); log('parseSpreadsheetML rows', Array.isArray(xmlRows)&&xmlRows.length===2);
+  }
+  </script>
+</body>
+</html>
