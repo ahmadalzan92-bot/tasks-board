@@ -1029,5 +1029,24 @@
     const xmlSample = '<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="S"><Table><Row><Cell><Data ss:Type="String">العنوان</Data></Cell></Row><Row><Cell><Data ss:Type="String">X</Data></Cell></Row></Table></Worksheet></Workbook>'; const xmlRows = parseSpreadsheetML(xmlSample); log('parseSpreadsheetML rows', Array.isArray(xmlRows)&&xmlRows.length===2);
   }
   </script>
+  <!-- Firebase SDKs are loaded below. Remove this comment for production. -->
+<!-- Firebase App (the core Firebase SDK) CDN -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<!-- TODO: Add other Firebase SDKs as needed -->
+
+<script>
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCt6It3EWyN5-E83Oxy2JajE9N67zVcP6c",
+    authDomain: "kanban-system-ahmad-alzan.firebaseapp.com",
+    projectId: "kanban-system-ahmad-alzan",
+    storageBucket: "kanban-system-ahmad-alzan.firebasestorage.app",
+    messagingSenderId: "678522636916",
+    appId: "1:678522636916:web:c6e99905aabad1c61d5f21"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+</script>
 </body>
 </html>
