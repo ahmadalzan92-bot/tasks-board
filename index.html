@@ -1059,9 +1059,9 @@
       <!-- Connection Status -->
       <div class="hub-status">
         <div class="hub-status-label">🔔 حالة الاتصال:</div>
-        <div class="hub-badge online" id="hubBadge">
+        <div class="hub-badge" id="hubBadge">
           <span class="bdot"></span>
-          <span>متصل (محلي) ⚡</span>
+          <span>⏳ جارٍ الاتصال...</span>
         </div>
       </div>
 
@@ -1100,7 +1100,7 @@
         <div class="hub-footer-inner">
           <span class="hub-footer-icon">⚙️</span>
           <span>تصميم وتطوير:</span>
-          <strong class="hub-footer-name">م. أحمد الزن</strong>
+          <strong class="hub-footer-name">م.أحمد الزن & م.رحاب السعدوني</strong>
           <span class="hub-footer-sep">|</span>
           <span>مديرية أشغال محافظة مأدبا</span>
           <span class="hub-footer-sep">|</span>
@@ -1115,7 +1115,7 @@
   <header class="app" id="appHeader" hidden>
     <div class="header-left">
     <h1>🗂 لوحة المهام والأعمال</h1>
-      <div class="credit">م. أحمد الزن</div>
+      <div class="credit">م. أحمد الزن & م.رحاب السعدوني</div>
       <div class="page-name" id="pageName"></div>
       <div class="muted" id="appStatus"></div>
     </div>
@@ -1374,6 +1374,175 @@
     </div>
   </dialog>
 
+  <!-- ══════════════════════════════════════════
+       Firebase SDKs (App + Firestore) — يجب أن تكون قبل السكريبت الرئيسي
+  ══════════════════════════════════════════ -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+  /* ══════════════════════════════════════════════════════
+     Firebase — إعداد المشروع
+  ══════════════════════════════════════════════════════ */
+  const firebaseConfig = {
+    apiKey: "AIzaSyCt6It3EWyN5-E83Oxy2JajE9N67zVcP6c",
+    authDomain: "kanban-system-ahmad-alzan.firebaseapp.com",
+    projectId: "kanban-system-ahmad-alzan",
+    storageBucket: "kanban-system-ahmad-alzan.firebasestorage.app",
+    messagingSenderId: "678522636916",
+    appId: "1:678522636916:web:c6e99905aabad1c61d5f21"
+  };
+  const _fbApp = firebase.initializeApp(firebaseConfig);
+  const _db    = firebase.firestore();
+
+  /* ══════════════════════════════════════════════════════
+     طبقة التخزين — Firebase Firestore بدلاً من localStorage
+     ─────────────────────────────────────────────────────
+     • ROOT_KEY    → مجموعة "kanban_meta"   / وثيقة "root"
+     • pageKey(id) → مجموعة "kanban_boards" / وثيقة id
+     • THEME_KEY   → localStorage فقط (إعداد شخصي لكل متصفح)
+     • مستمع onSnapshot على root وعلى اللوح النشط
+       لإعادة الرسم فور أي تغيير من جهاز آخر
+  ══════════════════════════════════════════════════════ */
+
+  // ── مؤشر حالة الاتصال في الواجهة ──
+  function _setOnline(ok){
+    const b = document.getElementById('hubBadge');
+    if(!b) return;
+    b.className = 'hub-badge ' + (ok ? 'online' : '');
+    b.querySelector('span:last-child').textContent = ok ? 'متصل بالسحابة ☁️' : 'غير متصل ⚠️';
+    // تحديث مؤشر داخل اللوحة أيضاً
+    const as = document.getElementById('appStatus');
+    if(as && ok) as.textContent = '';
+  }
+
+  // ── cache محلي مؤقت (لتسريع العرض وتفادي قراءات زائدة) ──
+  const _cache = {};
+
+  // ── علم لمنع onSnapshot من التعارض مع الكتابة المحلية ──
+  let _localWriting = false;
+
+  // ── مراجع اشتراكات onSnapshot ──
+  let _rootUnsub  = null;
+  let _boardUnsub = null;
+
+  /* ─── الحفظ في Firestore ─── */
+  async function lsSet(k, v){
+    if(k === 'kanban_v10_theme'){ try{ localStorage.setItem(k,v); }catch{} return; }
+    // تحديث الـ cache فوراً قبل الكتابة حتى لا يتعارض onSnapshot
+    _cache[k] = v;
+    _localWriting = true;
+    try{
+      if(k === 'kanban_v10_pages'){
+        await _db.collection('kanban_meta').doc('root').set({ json: v, ts: Date.now() });
+      } else {
+        const pageId = k.replace('kanban_v10_board_','');
+        await _db.collection('kanban_boards').doc(pageId).set({ json: v, ts: Date.now() });
+      }
+    }catch(e){
+      console.warn('Firebase write error:', e);
+    } finally {
+      setTimeout(()=>{ _localWriting = false; }, 800);
+    }
+  }
+
+  /* ─── القراءة المتزامنة من الـ cache (تُستدعى بعد initFirebase) ─── */
+  function lsGet(k){
+    if(k === 'kanban_v10_theme'){ try{ return localStorage.getItem(k); }catch{ return null; } }
+    return _cache[k] ?? null;
+  }
+
+  /* ══ مستمع حي على root — يُطلق فور الانتهاء من التحميل ══ */
+  function _subscribeRoot(){
+    if(_rootUnsub) _rootUnsub();
+    _rootUnsub = _db.collection('kanban_meta').doc('root')
+      .onSnapshot(snap=>{
+        if(!snap.exists) return;
+        const newJson = snap.data().json;
+        // تجاهل التحديث إذا كان الـ cache متطابقاً (كتابتنا نحن)
+        if(_cache['kanban_v10_pages'] === newJson) return;
+        _cache['kanban_v10_pages'] = newJson;
+        try{
+          const newRoot = JSON.parse(newJson);
+          // ── تحديث شاشة الدخول دائماً (حتى قبل تسجيل الدخول) ──
+          if(typeof root !== 'undefined'){
+            root = newRoot;
+          }
+          // إعادة بناء شبكة الصفحات في شاشة الدخول
+          if(typeof fillPageSelect === 'function') fillPageSelect();
+          // تحديث لوحة المسؤول إن كان مفتوحاً
+          if(typeof activePageId !== 'undefined' && activePageId &&
+             typeof renderAdminPanel === 'function' &&
+             root && root.pages[activePageId]?.role==='admin'){
+            renderAdminPanel();
+            if(typeof buildGlobalSelect === 'function') buildGlobalSelect();
+            if(typeof renderGlobal === 'function') renderGlobal();
+          }
+        }catch(e){ console.warn('root snapshot parse error', e); }
+      }, err=>{ console.warn('root listener error', err); });
+  }
+
+  /* ══ مستمع حي على اللوح النشط — يُطلق عند فتح صفحة ══ */
+  function _subscribeBoard(pageId){
+    if(_boardUnsub) _boardUnsub();
+    _boardUnsub = _db.collection('kanban_boards').doc(pageId)
+      .onSnapshot(snap=>{
+        if(!snap.exists) return;
+        // تجاهل التحديث أثناء كتابة محلية (لمنع تعارض الاستيراد والحفظ)
+        if(_localWriting) return;
+        const newJson = snap.data().json;
+        const cacheKey = 'kanban_v10_board_' + pageId;
+        if(_cache[cacheKey] === newJson) return;
+        _cache[cacheKey] = newJson;
+        try{
+          const newBoard = JSON.parse(newJson);
+          if(typeof activePageId !== 'undefined' && pageId === activePageId && typeof state !== 'undefined' && state){
+            state = newBoard;
+            if(typeof ensureSubPages === 'function') ensureSubPages();
+            const cur = typeof getActiveSubPage === 'function' ? getActiveSubPage() : null;
+            if(cur) state.columns = cur.columns || [];
+            if(typeof render === 'function') render();
+            if(typeof renderBanners === 'function') renderBanners();
+            if(typeof updateAllBadges === 'function') updateAllBadges();
+            _showSyncToast();
+          }
+        }catch(e){ console.warn('board snapshot parse error', e); }
+      }, err=>{ console.warn('board listener error', err); });
+  }
+
+  /* ── إشعار تحديث حي (Toast سفلي) ── */
+  let _syncToastTimer = null;
+  function _showSyncToast(){
+    let t = document.getElementById('_syncToast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = '_syncToast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:24px;z-index:9999;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.45);pointer-events:none;transition:opacity .4s ease;';
+      document.body.appendChild(t);
+    }
+    t.textContent = '☁️ تم استلام تحديث من جهاز آخر';
+    t.style.opacity = '1';
+    clearTimeout(_syncToastTimer);
+    _syncToastTimer = setTimeout(()=>{ t.style.opacity='0'; }, 3500);
+  }
+
+  /* ══ تهيئة Firebase: جلب root من Firestore قبل بدء التطبيق ══ */
+  async function initFirebase(){
+    _setOnline(false);
+    try{
+      const rootSnap = await _db.collection('kanban_meta').doc('root').get();
+      if(rootSnap.exists){
+        _cache['kanban_v10_pages'] = rootSnap.data().json;
+      }
+      _setOnline(true);
+    }catch(e){
+      console.warn('Firebase init error:', e);
+      // تشغيل محلي عند فشل الاتصال
+      _setOnline(false);
+    }
+  }
+  </script>
+
   <script>
   "use strict";
   /** @typedef {{ id:string, name:string, type:string, size:number, dataUrl:string }} Attachment */
@@ -1472,9 +1641,7 @@
   const bulletinReplyText = document.getElementById('bulletinReplyText');
   const sendReplyToBranch = document.getElementById('sendReplyToBranch');
 
-  // Utils
-  function lsGet(k){ try{ return localStorage.getItem(k); } catch { return null; } }
-  function lsSet(k,v){ try{ localStorage.setItem(k,v); } catch { /* ignore */ } }
+  // Utils — lsGet / lsSet معرّفتان في كتلة Firebase أعلاه
   function setTheme(mode){ document.documentElement.dataset.theme = mode; lsSet(THEME_KEY, mode); }
   function show(el){ el.hidden=false; el.style.display=''; }
   function hide(el){ el.hidden=true; el.style.display='none'; }
@@ -1506,6 +1673,7 @@
     const t = lsGet(ROOT_KEY);
     if(!t){
       root = createDefaultRoot();
+      // حفظ في Firebase
       lsSet(ROOT_KEY, JSON.stringify(root));
       return;
     }
@@ -1522,9 +1690,21 @@
       lsSet(ROOT_KEY, JSON.stringify(root));
     }
   }
-  function saveRoot(){ lsSet(ROOT_KEY, JSON.stringify(root)); }
+  function saveRoot(){
+    const json = JSON.stringify(root);
+    // تحديث الـ cache فوراً لضمان تحديث الواجهة بدون انتظار Firebase
+    _cache[ROOT_KEY] = json;
+    // تحديث شاشة الدخول فوراً
+    if(typeof fillPageSelect === 'function') fillPageSelect();
+    // الحفظ في Firebase
+    lsSet(ROOT_KEY, json);
+  }
   function loadBoard(pageId){ const t = lsGet(pageKey(pageId)); if(!t) return null; try{ const b=JSON.parse(t); return b; }catch{ return null; } }
-  function saveBoard(pageId, board){ lsSet(pageKey(pageId), JSON.stringify(board)); }
+  function saveBoard(pageId, board){
+    const json = JSON.stringify(board);
+    _cache[pageKey(pageId)] = json;
+    lsSet(pageKey(pageId), json);
+  }
 
   function fillPageSelect(){
     pageSelect.innerHTML='';
@@ -1590,7 +1770,35 @@
 
   function openPage(pid){
     activePageId = pid; root.active = pid; saveRoot();
-    state = loadBoard(pid) || createDefaultBoard();
+
+    // ── تحميل اللوح من Firebase cache أو الإنشاء الافتراضي ──
+    const boardJson = lsGet(pageKey(pid));
+    state = boardJson ? (() => { try{ return JSON.parse(boardJson); }catch{ return null; } })() : null;
+    if(!state){
+      // حاول جلبه من Firebase مباشرة إن لم يكن في الـ cache
+      _db.collection('kanban_boards').doc(pid).get().then(snap=>{
+        if(snap.exists){
+          _cache[pageKey(pid)] = snap.data().json;
+          state = JSON.parse(snap.data().json);
+        } else {
+          state = createDefaultBoard();
+          lsSet(pageKey(pid), JSON.stringify(state));
+        }
+        _finishOpenPage(pid);
+      }).catch(()=>{
+        state = createDefaultBoard();
+        lsSet(pageKey(pid), JSON.stringify(state));
+        _finishOpenPage(pid);
+      });
+      return;
+    }
+    _finishOpenPage(pid);
+  }
+
+  function _finishOpenPage(pid){
+    // ── بدء المستمع الحي على هذا اللوح ──
+    _subscribeBoard(pid);
+
     // Init sub-pages system
     ensureSubPages();
     const cur = getActiveSubPage();
@@ -1612,7 +1820,13 @@
     updateAllBadges();
   }
 
-  function logout(){ hide(appHeader); hide(boardEl); hide(hintEl); hide(globalPanel); tabsContainer.hidden=true; tabsContainer.style.display='none'; show(gateEl); pagePassword.value=''; fillPageSelect(); }
+  function logout(){
+    // إيقاف المستمع الحي على اللوح
+    if(_boardUnsub){ _boardUnsub(); _boardUnsub=null; }
+    hide(appHeader); hide(boardEl); hide(hintEl); hide(globalPanel);
+    tabsContainer.hidden=true; tabsContainer.style.display='none';
+    show(gateEl); pagePassword.value=''; fillPageSelect();
+  }
 
   function renderAdminPanel(){
     adminGrid.innerHTML='';
@@ -2281,12 +2495,14 @@
   })();
 
   function persist(){
-    // sync columns into active subpage
-    if(state && state.subPages){
+    if(!state || !activePageId) return;
+    // مزامنة الأعمدة النشطة في الـ subpage الحالية
+    if(state.subPages){
       const cur = getActiveSubPage();
-      if(cur) cur.columns = state.columns;
+      if(cur) cur.columns = state.columns ? [...state.columns] : [];
     }
-    saveBoard(activePageId, state); renderBanners();
+    saveBoard(activePageId, state);
+    renderBanners();
   }
 
   // ===== Sub-page Tabs (Excel-style) =====
@@ -2763,7 +2979,7 @@
           if(idx.col>=0){ const colTitle=(r[idx.col]||'').trim(); if(colTitle){ let col=state.columns.find(c=>c.title===colTitle); if(!col){ col={id:uid(), title:colTitle, tasks:[]}; state.columns.push(col); } colId=col.id; } }
           const col=state.columns.find(c=>c.id===colId); col.tasks.unshift({ id:uid(), title, notes, priority:pr||'medium', created:Date.now(), style:{}, atts:[], comments:[] });
         }
-        persist(); render(); alert('تم استيراد المهام من الملف.'); e.target.value='';
+        persist(); render(); alert('✅ تم استيراد المهام من الملف بنجاح.'); e.target.value='';
       }catch(err){ alert('تعذر الاستيراد: '+err.message); }
     };
     reader.onerror=()=> alert('فشل قراءة الملف');
@@ -2924,7 +3140,45 @@
     exportAllWordBtn.addEventListener('click', exportAllToWord);
     exportAllExcelBtn.addEventListener('click', exportAllToExcel);
     exportBtn.addEventListener('click', ()=> downloadBlob(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}), `kanban-${sanitizeFilename(root.pages[activePageId].name)}.json`));
-    importFile.addEventListener('change', (e)=>{ const f=e.target.files[0]; if(!f) return; f.text().then(txt=>{ try{ const data=JSON.parse(txt); if(!data||!Array.isArray(data.columns)) throw new Error('صيغة غير صالحة'); state={ columns: data.columns.map(c=>({ id:c.id||uid(), title:String(c.title||'عمود'), color:c.color||undefined, tasks:Array.isArray(c.tasks)? c.tasks.map(t=>({ id:t.id||uid(), title:String(t.title||'مهمة'), notes:String(t.notes||''), priority:(['low','medium','high'].includes(t.priority)? t.priority:'medium'), created:Number(t.created||Date.now()), style:t.style||{}, atts:Array.isArray(t.atts)? t.atts.filter(a=>a && a.dataUrl):[], comments:Array.isArray(t.comments)? t.comments.filter(c=>c && c.text):[] })) : [] })) }; persist(); render(); }catch(ex){ alert('ملف غير صالح: '+ex.message); } }); });
+    importFile.addEventListener('change', (e)=>{
+      const f=e.target.files[0]; if(!f) return;
+      f.text().then(txt=>{
+        try{
+          const data=JSON.parse(txt);
+          if(!data||!Array.isArray(data.columns)) throw new Error('صيغة غير صالحة');
+          const cleanCols = data.columns.map(c=>({
+            id: c.id||uid(),
+            title: String(c.title||'عمود'),
+            color: c.color||undefined,
+            tasks: Array.isArray(c.tasks)? c.tasks.map(t=>({
+              id: t.id||uid(),
+              title: String(t.title||'مهمة'),
+              notes: String(t.notes||''),
+              priority: (['low','medium','high'].includes(t.priority)? t.priority:'medium'),
+              created: Number(t.created||Date.now()),
+              style: t.style||{},
+              atts: Array.isArray(t.atts)? t.atts.filter(a=>a && a.dataUrl):[],
+              comments: Array.isArray(t.comments)? t.comments.filter(c=>c && c.text):[]
+            })) : []
+          }));
+          // إعادة بناء الـ state مع subPages
+          ensureSubPages();
+          const cur = getActiveSubPage();
+          if(cur){
+            cur.columns = cleanCols;
+            state.columns = cleanCols;
+          } else {
+            state.columns = cleanCols;
+          }
+          persist();
+          render();
+          // تأكيد بصري
+          const origTxt = e.target.previousElementSibling?.textContent;
+          alert(`✅ تم استيراد ${cleanCols.length} عمود بنجاح`);
+          e.target.value='';
+        }catch(ex){ alert('ملف غير صالح: '+ex.message); }
+      });
+    });
     resetBtn.addEventListener('click', ()=>{ if(!confirm('إعادة ضبط هذه الصفحة فقط؟')) return; state=createDefaultBoard(); persist(); render(); });
     searchEl.addEventListener('input', applySearch);
 
@@ -2947,16 +3201,25 @@
   }
 
   // ===== Init =====
-  document.addEventListener('DOMContentLoaded', function(){
+  document.addEventListener('DOMContentLoaded', async function(){
     try{
       const th = lsGet(THEME_KEY); if(th==='light') setTheme('light');
       syncHubTheme();
       // سنة التذييل
       const fyEl = document.getElementById('hubFooterYear');
       if(fyEl) fyEl.textContent = new Date().getFullYear();
+
+      // ── تحميل البيانات من Firebase أولاً ──
+      await initFirebase();
+
       loadRoot();
       fillPageSelect();
+
+      // ── بدء المستمع الحي على root (يعمل دائماً حتى في شاشة الدخول) ──
+      _subscribeRoot();
+
       pagePassword.focus();
+
       window.addEventListener('error', (e)=>{ const el=document.getElementById('appStatus')||loginStatus; if(el){ el.textContent = '⚠︎ خطأ: '+ (e?.error?.message||e?.message||'غير معروف'); el.style.color='#fca5a5'; } });
       window.addEventListener('unhandledrejection', (e)=>{ const el=document.getElementById('appStatus')||loginStatus; if(el){ el.textContent = '⚠︎ خطأ (وعد غير معالج): '+ (e?.reason?.message||e?.reason||''); el.style.color='#fca5a5'; } });
       const obs = new MutationObserver(()=> reapplyAllTaskColors()); obs.observe(boardEl, { childList:true, subtree:true });
@@ -2966,24 +3229,5 @@
   });
 
   </script>
-  <!-- Firebase SDKs are loaded below. Remove this comment for production. -->
-<!-- Firebase App (the core Firebase SDK) CDN -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<!-- TODO: Add other Firebase SDKs as needed -->
-
-<script>
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCt6It3EWyN5-E83Oxy2JajE9N67zVcP6c",
-    authDomain: "kanban-system-ahmad-alzan.firebaseapp.com",
-    projectId: "kanban-system-ahmad-alzan",
-    storageBucket: "kanban-system-ahmad-alzan.firebasestorage.app",
-    messagingSenderId: "678522636916",
-    appId: "1:678522636916:web:c6e99905aabad1c61d5f21"
-  };
-
-  // Initialize Firebase
-  const app = firebase.initializeApp(firebaseConfig);
-</script>
 </body>
 </html>
