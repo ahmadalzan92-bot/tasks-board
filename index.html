@@ -931,6 +931,34 @@
       background:var(--muted);
     }
 
+    /* ── شارة المهمة المحوَّلة ── */
+    .task-transferred-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-size:10px;
+      font-weight:700;
+      background:rgba(168,85,247,.18);
+      color:#c084fc;
+      border:1px solid rgba(168,85,247,.3);
+      border-radius:99px;
+      padding:2px 8px;
+      animation:badgePop .3s ease both;
+    }
+    .task-incoming-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-size:10px;
+      font-weight:700;
+      background:rgba(245,158,11,.18);
+      color:#fbbf24;
+      border:1px solid rgba(245,158,11,.3);
+      border-radius:99px;
+      padding:2px 8px;
+      animation:badgePop .3s ease both;
+    }
+
     /* badge على العمود */
     .col-notif-badge{
       display:none;
@@ -1123,6 +1151,7 @@
       <input id="search" class="field" type="search" placeholder="🔎 بحث عن مهمة..." />
       <button id="addTaskBtn" type="button" class="btn accent">➕ مهمة</button>
       <button id="addColumnBtn" type="button" class="btn">➕ عمود</button>
+      <button id="reportBtn" type="button" class="btn" style="background:linear-gradient(135deg,#0f766e,#0d9488);border-color:transparent;color:#fff;font-weight:600;">📋 إصدار تقرير رسمي</button>
       <button id="exportAllWordBtn" type="button" class="btn">📄 تصدير Word</button>
       <button id="exportAllExcelBtn" type="button" class="btn">📊 تصدير Excel</button>
       <button id="exportBtn" type="button" class="btn">⬇️ JSON</button>
@@ -1145,6 +1174,7 @@
     <div id="bannerGlobal" class="card" style="display:none"></div>
     <div id="bannerToAdmin" class="card" style="display:none"></div>
     <div id="bannerFromAdminToBranch" class="card" style="display:none"></div>
+    <div id="bannerTransferred" class="card" style="display:none;border-right:3px solid var(--purple);background:rgba(168,85,247,.07);"></div>
   </section>
 
   <section id="adminPanel" class="admin-panel" hidden>
@@ -1239,6 +1269,7 @@
         <div class="task-title" data-title></div>
         <div class="task-actions">
           <button class="icon-btn" type="button" data-toggle-comments title="إظهار/إخفاء التعليقات">💬</button>
+          <button class="icon-btn" type="button" data-transfer-task title="تحويل المهمة إلى صفحة فرعية" style="display:none">↗️</button>
           <button class="icon-btn" type="button" data-export-doc title="Word">📄</button>
           <button class="icon-btn" type="button" data-export-xls title="Excel">📊</button>
           <button class="icon-btn" type="button" data-edit title="تعديل">✏️</button>
@@ -1290,6 +1321,14 @@
           </label>
         </div>
         <label>الأولوية<select id="taskPriority"><option value="low">منخفضة</option><option value="medium" selected>متوسطة</option><option value="high">مرتفعة</option></select></label>
+        <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:5px;">
+          📅 تاريخ المهمة
+          <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">
+            <input id="taskDate" type="datetime-local" style="width:100%;background:var(--card);color:var(--text);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;font-family:inherit;font-size:13px;outline:none;transition:border-color .18s,box-shadow .18s;" />
+            <button type="button" id="taskDateNow" class="btn" style="white-space:nowrap;font-size:12px;padding:8px 12px;" title="تعيين الوقت الحالي">🕐 الآن</button>
+          </div>
+          <span style="font-size:11px;color:var(--muted);">يمكن تحديد تاريخ سابق لتسجيل مهام متأخرة</span>
+        </label>
         <fieldset style="border:1px solid rgba(148,163,184,.2);border-radius:12px;padding:8px">
           <legend class="muted">المرفقات (صور / PDF)</legend>
           <div class="row" style="grid-auto-flow:column;gap:8px;align-items:center">
@@ -1370,6 +1409,121 @@
       <div class="modal-footer" style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">
         <input id="newSheetNameInput" class="field" type="text" placeholder="اسم الورقة الجديدة..." maxlength="40" />
         <button id="addSheetBtn" class="btn accent" type="button">➕ إضافة ورقة</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ══════════ Report Dialog ══════════ -->
+  <dialog id="reportModal" class="modal" style="width:min(620px,96vw)">
+    <div style="background:var(--panel);border-radius:var(--radius);">
+      <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <strong>📋 إصدار تقرير رسمي</strong>
+        <button class="icon-btn" id="reportModalClose" style="font-size:18px;">✕</button>
+      </div>
+      <div class="modal-body" style="display:grid;gap:14px;">
+        <!-- معلومات الجهة -->
+        <fieldset style="border:1px solid var(--border2);border-radius:12px;padding:12px 14px;">
+          <legend style="color:var(--accent2);font-size:12px;font-weight:700;padding:0 6px;">🏛 معلومات الجهة</legend>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:4px;">
+              اسم الجهة / الوزارة
+              <input id="rptOrg" class="field" type="text" placeholder="مثال: مديرية أشغال محافظة مأدبا" value="مديرية أشغال محافظة مأدبا" />
+            </label>
+            <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:4px;">
+              القسم / الوحدة
+              <input id="rptDept" class="field" type="text" placeholder="مثال: قسم المتابعة والتقارير" />
+            </label>
+            <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:4px;">
+              اسم معد التقرير
+              <input id="rptAuthor" class="field" type="text" placeholder="الاسم الكامل" />
+            </label>
+            <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:4px;">
+              رقم التقرير (اختياري)
+              <input id="rptNumber" class="field" type="text" placeholder="مثال: 2025/001" />
+            </label>
+          </div>
+        </fieldset>
+        <!-- نطاق التاريخ -->
+        <fieldset style="border:1px solid var(--border2);border-radius:12px;padding:12px 14px;">
+          <legend style="color:var(--accent2);font-size:12px;font-weight:700;padding:0 6px;">📅 نطاق التاريخ</legend>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:4px;">
+              من تاريخ
+              <input id="rptDateFrom" class="field" type="date" />
+            </label>
+            <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:4px;">
+              إلى تاريخ
+              <input id="rptDateTo" class="field" type="date" />
+            </label>
+          </div>
+        </fieldset>
+        <!-- اختيار الأعمدة -->
+        <fieldset style="border:1px solid var(--border2);border-radius:12px;padding:12px 14px;">
+          <legend style="color:var(--accent2);font-size:12px;font-weight:700;padding:0 6px;">📂 الأعمدة المشمولة في التقرير</legend>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+            <button type="button" class="btn" id="rptSelAll" style="font-size:11px;padding:4px 10px;">تحديد الكل</button>
+            <button type="button" class="btn" id="rptDeselAll" style="font-size:11px;padding:4px 10px;">إلغاء الكل</button>
+          </div>
+          <div id="rptColsList" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;"></div>
+        </fieldset>
+        <!-- خيارات التقرير -->
+        <fieldset style="border:1px solid var(--border2);border-radius:12px;padding:12px 14px;">
+          <legend style="color:var(--accent2);font-size:12px;font-weight:700;padding:0 6px;">⚙️ خيارات التقرير</legend>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);">
+              <input type="checkbox" id="rptOptNotes" checked style="width:15px;height:15px;" /> إظهار الملاحظات
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);">
+              <input type="checkbox" id="rptOptComments" style="width:15px;height:15px;" /> إظهار التعليقات
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);">
+              <input type="checkbox" id="rptOptPriority" checked style="width:15px;height:15px;" /> إظهار الأولوية
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);">
+              <input type="checkbox" id="rptOptDate" checked style="width:15px;height:15px;" /> إظهار التاريخ
+            </label>
+          </div>
+        </fieldset>
+        <div id="rptStatus" style="font-size:12px;color:var(--muted);min-height:16px;text-align:center;"></div>
+      </div>
+      <div class="modal-footer" style="gap:8px;">
+        <button id="rptPreviewBtn" class="btn" style="background:linear-gradient(135deg,#0f766e,#0d9488);border-color:transparent;color:#fff;font-weight:600;">👁 معاينة وطباعة</button>
+        <button id="rptWordBtn" class="btn accent">📄 تنزيل Word</button>
+        <button class="btn" id="rptCancelBtn">إغلاق</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ══════════ Transfer Task Dialog ══════════ -->
+  <dialog id="transferTaskModal" class="modal">
+    <div style="background:var(--panel);border-radius:var(--radius);width:min(480px,96vw);">
+      <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <strong>↗️ تحويل المهمة إلى صفحة</strong>
+        <button class="icon-btn" id="transferModalClose" style="font-size:18px;">✕</button>
+      </div>
+      <div class="modal-body" style="display:grid;gap:14px;">
+        <div id="transferTaskInfo" style="background:rgba(59,130,246,.08);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;"></div>
+        <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:5px;">
+          📄 الصفحة الهدف
+          <select id="transferTargetPage" class="field"></select>
+        </label>
+        <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:5px;">
+          📂 العمود الهدف
+          <select id="transferTargetColumn" class="field"></select>
+        </label>
+        <label style="font-size:13px;font-weight:600;color:var(--text2);display:grid;gap:5px;">
+          <span>📝 رسالة مع التحويل (اختياري)</span>
+          <textarea id="transferMessage" class="field" rows="2" placeholder="أضف ملاحظة للصفحة الهدف عن هذه المهمة..." style="min-height:60px;resize:vertical;"></textarea>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);">
+          <input type="checkbox" id="transferKeepCopy" style="width:16px;height:16px;" />
+          الاحتفاظ بنسخة في الصفحة الحالية
+        </label>
+        <div id="transferStatus" style="font-size:12px;min-height:16px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="transferConfirmBtn" class="btn accent">↗️ تحويل المهمة</button>
+        <button class="btn" id="transferCancelBtn">إلغاء</button>
       </div>
     </div>
   </dialog>
@@ -2109,6 +2263,31 @@
         t.querySelector('[data-delete]').addEventListener('click', ()=>{ if(!confirm('حذف هذه المهمة؟')) return; col.tasks = col.tasks.filter(tt=>tt.id!==task.id); persist(); render(); });
         t.querySelector('[data-export-doc]').addEventListener('click', ()=> exportTaskToWord(task, col.color));
         t.querySelector('[data-export-xls]').addEventListener('click', ()=> exportTaskToExcel(task, col.color));
+
+        // زر التحويل — يظهر للمسؤول فقط
+        const transferBtn = t.querySelector('[data-transfer-task]');
+        if(transferBtn){
+          const isAdmin = root?.pages[activePageId]?.role === 'admin';
+          if(isAdmin){
+            transferBtn.style.display = '';
+            transferBtn.addEventListener('click', ()=> openTransferModal(col.id, task.id));
+          }
+          // عرض شارة "محوَّل" إن كانت المهمة محوَّلة
+          if(task.transferredTo){
+            const badge = document.createElement('span');
+            badge.className = 'task-transferred-badge';
+            badge.title = `محوَّلة إلى: ${root?.pages[task.transferredTo]?.name || task.transferredTo}`;
+            badge.textContent = `↗ ${root?.pages[task.transferredTo]?.name || ''}`;
+            t.querySelector('[data-title]').after(badge);
+          }
+          if(task.transferredFrom){
+            const badge = document.createElement('span');
+            badge.className = 'task-incoming-badge';
+            badge.title = `واردة من: ${root?.pages[task.transferredFrom]?.name || task.transferredFrom}`;
+            badge.textContent = `↙ من ${root?.pages[task.transferredFrom]?.name || ''}`;
+            t.querySelector('[data-title]').after(badge);
+          }
+        }
         t.addEventListener('dragstart',(e)=>{ e.dataTransfer.setData('text/plain', JSON.stringify({taskId:task.id, fromCol:col.id})); e.dataTransfer.effectAllowed='move'; t.classList.add('ghost'); });
         t.addEventListener('dragend',()=> t.classList.remove('ghost'));
         tasksEl.appendChild(t);
@@ -2181,7 +2360,7 @@
     const items=[];
     (root.globalNotes||[]).forEach(n=>{ if(n.created>cutoff) items.push({type:'global',text:n.text,from:'المسؤول — تعليق عام',time:n.created}); });
     if(page&&page.role!=='admin'){
-      (page.notes||[]).filter(n=>n.author==='admin').forEach(n=>{ if(n.created>cutoff) items.push({type:'reply',text:n.text,from:'رد من المسؤول',time:n.created}); });
+      (page.notes||[]).filter(n=>n.author==='admin').forEach(n=>{ if(n.created>cutoff) items.push({type: n.type||'reply', text:n.type==='transfer'?`↗️ مهمة واردة: "${n.taskTitle||''}"`:n.text, from: n.type==='transfer'?'مهمة محوَّلة من المسؤول':'رد من المسؤول', time:n.created}); });
     }
     if(page&&page.role==='admin'){
       Object.values(root.pages).forEach(p=>{
@@ -2809,21 +2988,224 @@
     const col = state.columns.find(c=>c.id===columnId);
     const task = taskId ? (col?.tasks.find(t=>t.id===taskId)) : null;
     modalAttBuffer = []; taskAttPreview.innerHTML='';
+    const dateInput = document.getElementById('taskDate');
+
+    // دالة مساعدة: timestamp → قيمة datetime-local
+    function tsToLocal(ts){
+      const d = new Date(ts);
+      // تصحيح offset المنطقة الزمنية المحلية
+      const off = d.getTimezoneOffset() * 60000;
+      return new Date(d - off).toISOString().slice(0,16);
+    }
+
     if(task){
       modalTitle.textContent='تعديل مهمة';
       taskTitle.value=task.title||''; taskNotes.value=task.notes||''; taskPriority.value=task.priority||'medium';
       taskFont.value = task.style?.font || '';
       taskFontSize.value = task.style?.size || '';
       taskFontColor.value = task.style?.color || '#e5e7eb';
+      dateInput.value = tsToLocal(task.created || Date.now());
       (task.atts||[]).forEach(a=> addAttPreview(a));
     } else {
       modalTitle.textContent='مهمة جديدة';
       taskTitle.value=''; taskNotes.value=''; taskPriority.value='medium';
       taskFont.value=''; taskFontSize.value=''; taskFontColor.value='#e5e7eb';
+      dateInput.value = tsToLocal(Date.now());
     }
     modal.showModal(); setTimeout(()=>taskTitle.focus(),30);
   }
+
+  // زر "الآن" لإعادة تعيين الوقت الحالي
+  document.getElementById('taskDateNow').addEventListener('click', ()=>{
+    const d = new Date();
+    const off = d.getTimezoneOffset() * 60000;
+    document.getElementById('taskDate').value = new Date(d - off).toISOString().slice(0,16);
+  });
   function addColumn(title){ state.columns.push({ id: uid(), title: title||`عمود ${state.columns.length+1}`, tasks: [] }); persist(); render(); }
+
+  /* ══════════════════════════════════════════════
+     نظام تحويل المهام من المسؤول إلى الصفحات الفرعية
+  ══════════════════════════════════════════════ */
+  let _transferCtx = null; // { colId, taskId }
+
+  function openTransferModal(colId, taskId){
+    const col = state.columns.find(c=>c.id===colId);
+    const task = col?.tasks.find(t=>t.id===taskId);
+    if(!task) return;
+    _transferCtx = { colId, taskId };
+
+    // معلومات المهمة
+    const infoEl = document.getElementById('transferTaskInfo');
+    infoEl.innerHTML = `<strong>📌 ${escapeHtml(task.title)}</strong>${task.notes?`<br><span style="color:var(--muted);font-size:12px">${escapeHtml(task.notes.slice(0,80))}${task.notes.length>80?'...':''}</span>`:''}
+      <br><span class="pill ${task.priority==='high'?'high':task.priority==='medium'?'med':'low'}" style="margin-top:6px;display:inline-block">${task.priority==='high'?'أولوية مرتفعة':task.priority==='medium'?'أولوية متوسطة':'أولوية منخفضة'}</span>`;
+
+    // ملء قائمة الصفحات (غير المسؤول)
+    const pageSel = document.getElementById('transferTargetPage');
+    pageSel.innerHTML = '';
+    Object.values(root.pages).filter(p=>p.id!=='admin' && p.enabled).forEach(p=>{
+      const o = document.createElement('option'); o.value=p.id; o.textContent=p.name; pageSel.appendChild(o);
+    });
+
+    // تحديث الأعمدة عند تغيير الصفحة
+    pageSel.onchange = () => _fillTransferColumns(pageSel.value);
+    _fillTransferColumns(pageSel.value);
+
+    document.getElementById('transferMessage').value = '';
+    document.getElementById('transferKeepCopy').checked = false;
+    document.getElementById('transferStatus').textContent = '';
+    document.getElementById('transferTaskModal').showModal();
+  }
+
+  async function _fillTransferColumns(pageId){
+    const sel = document.getElementById('transferTargetColumn');
+    sel.innerHTML = '<option value="">جارٍ التحميل...</option>';
+    try{
+      const boardJson = lsGet(pageKey(pageId));
+      let board = boardJson ? JSON.parse(boardJson) : null;
+      if(!board){
+        const snap = await _db.collection('kanban_boards').doc(pageId).get();
+        board = snap.exists ? JSON.parse(snap.data().json) : null;
+      }
+      sel.innerHTML = '';
+      if(board && board.columns && board.columns.length){
+        // أعمدة الورقة النشطة (activeSubPage) أو كل الأعمدة
+        const allCols = [];
+        if(board.subPages && board.subPages.length){
+          board.subPages.forEach(sp=>{
+            (sp.columns||[]).forEach(c=>{ allCols.push({id:c.id, title:`${sp.name} / ${c.title}`, sheetId:sp.id}); });
+          });
+        } else {
+          board.columns.forEach(c=>{ allCols.push({id:c.id, title:c.title, sheetId:null}); });
+        }
+        if(!allCols.length){ sel.innerHTML='<option value="">لا توجد أعمدة</option>'; return; }
+        allCols.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.dataset.sheetId=c.sheetId||''; o.textContent=c.title; sel.appendChild(o); });
+      } else {
+        sel.innerHTML='<option value="">لا توجد أعمدة — ستُضاف تلقائياً</option>';
+      }
+    }catch(e){ sel.innerHTML='<option value="">خطأ في التحميل</option>'; }
+  }
+
+  async function confirmTransfer(){
+    if(!_transferCtx) return;
+    const { colId, taskId } = _transferCtx;
+    const col = state.columns.find(c=>c.id===colId);
+    const task = col?.tasks.find(t=>t.id===taskId);
+    if(!task){ document.getElementById('transferTaskModal').close(); return; }
+
+    const targetPageId = document.getElementById('transferTargetPage').value;
+    const targetColId = document.getElementById('transferTargetColumn').value;
+    const message = document.getElementById('transferMessage').value.trim();
+    const keepCopy = document.getElementById('transferKeepCopy').checked;
+    const statusEl = document.getElementById('transferStatus');
+
+    if(!targetPageId){ statusEl.textContent='⚠ اختر الصفحة الهدف'; statusEl.style.color='var(--red2)'; return; }
+    const targetPage = root.pages[targetPageId];
+    if(!targetPage){ statusEl.textContent='⚠ الصفحة غير موجودة'; statusEl.style.color='var(--red2)'; return; }
+
+    statusEl.textContent = '⏳ جارٍ التحويل...'; statusEl.style.color='var(--muted)';
+    document.getElementById('transferConfirmBtn').disabled = true;
+
+    try{
+      // جلب لوح الصفحة الهدف
+      let targetBoard = null;
+      const tbJson = lsGet(pageKey(targetPageId));
+      if(tbJson){ try{ targetBoard=JSON.parse(tbJson); }catch{} }
+      if(!targetBoard){
+        const snap = await _db.collection('kanban_boards').doc(targetPageId).get();
+        targetBoard = snap.exists ? JSON.parse(snap.data().json) : createDefaultBoard();
+      }
+
+      // إنشاء نسخة المهمة للصفحة الهدف
+      const newTask = JSON.parse(JSON.stringify(task));
+      newTask.id = uid();
+      newTask.transferredFrom = activePageId;
+      newTask.transferredFromName = root.pages[activePageId]?.name || activePageId;
+      newTask.transferredAt = Date.now();
+      if(message){
+        newTask.comments = newTask.comments || [];
+        newTask.comments.unshift({ id:uid(), text:`📨 رسالة من المسؤول: ${message}`, created:Date.now(), author: root.pages[activePageId]?.name||'المسؤول', authorPageId:activePageId });
+      }
+
+      // إيجاد العمود الهدف وإضافة المهمة
+      let inserted = false;
+      // إذا كانت هناك subPages
+      if(targetBoard.subPages && targetBoard.subPages.length){
+        outer:
+        for(const sp of targetBoard.subPages){
+          for(const c of (sp.columns||[])){
+            if(c.id===targetColId){ c.tasks.unshift(newTask); inserted=true; break outer; }
+          }
+        }
+        if(!inserted){
+          // أضف للورقة النشطة في أول عمود
+          const activeSp = targetBoard.subPages.find(s=>s.id===targetBoard.activeSubPage) || targetBoard.subPages[0];
+          if(activeSp){
+            if(!activeSp.columns || !activeSp.columns.length) activeSp.columns=[{id:uid(),title:'المهام الواردة',tasks:[]}];
+            activeSp.columns[0].tasks.unshift(newTask);
+            inserted=true;
+          }
+        }
+        // مزامنة targetBoard.columns مع الورقة النشطة
+        const activeSp = targetBoard.subPages.find(s=>s.id===targetBoard.activeSubPage)||targetBoard.subPages[0];
+        if(activeSp) targetBoard.columns = activeSp.columns;
+      } else {
+        // لوح بدون subPages
+        const tc = targetBoard.columns.find(c=>c.id===targetColId);
+        if(tc){ tc.tasks.unshift(newTask); inserted=true; }
+        else if(targetBoard.columns.length){ targetBoard.columns[0].tasks.unshift(newTask); inserted=true; }
+        else { targetBoard.columns=[{id:uid(),title:'المهام الواردة',tasks:[newTask]}]; inserted=true; }
+      }
+
+      // إضافة إشعار تحويل في notes الصفحة الهدف
+      ensurePageNotes(targetPageId);
+      root.pages[targetPageId].notes = root.pages[targetPageId].notes || [];
+      root.pages[targetPageId].notes.push({
+        id: uid(),
+        text: `📨 تم استلام مهمة جديدة محوَّلة من المسؤول: "${task.title}"${message?' — '+message:''}`,
+        created: Date.now(),
+        author: 'admin',
+        type: 'transfer',
+        taskTitle: task.title
+      });
+
+      // حفظ لوح الصفحة الهدف
+      await lsSet(pageKey(targetPageId), JSON.stringify(targetBoard));
+      // حفظ root (الإشعار)
+      saveRoot();
+
+      // تعليم المهمة الأصلية كمحوَّلة
+      task.transferredTo = targetPageId;
+      task.transferredToName = targetPage.name;
+      task.transferredAt = Date.now();
+
+      if(!keepCopy){
+        col.tasks = col.tasks.filter(tt=>tt.id!==taskId);
+      }
+
+      persist();
+      render();
+      renderBanners();
+
+      statusEl.textContent = `✅ تم التحويل إلى "${targetPage.name}" بنجاح!`; statusEl.style.color='var(--green2)';
+
+      // إظهار toast
+      _showTransferToast(task.title, targetPage.name);
+
+      setTimeout(()=>{ document.getElementById('transferTaskModal').close(); _transferCtx=null; }, 1500);
+    }catch(e){
+      statusEl.textContent = '❌ فشل التحويل: ' + e.message; statusEl.style.color='var(--red2)';
+      document.getElementById('transferConfirmBtn').disabled = false;
+    }
+  }
+
+  function _showTransferToast(taskTitle, targetName){
+    document.getElementById('_trToast')?.remove();
+    const d = document.createElement('div'); d.id='_trToast';
+    d.style.cssText='position:fixed;bottom:24px;right:24px;z-index:9999;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border-radius:12px;padding:12px 18px;font-size:13px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.45);pointer-events:none;transition:opacity .4s ease;max-width:300px;';
+    d.innerHTML=`<span style="font-size:18px">↗️</span><div><div>تم تحويل المهمة</div><div style="font-weight:400;font-size:11px;margin-top:2px;opacity:.85">"${escapeHtml(taskTitle.slice(0,40))}" → ${escapeHtml(targetName)}</div></div>`;
+    document.body.appendChild(d);
+    setTimeout(()=>{ d.style.opacity='0'; setTimeout(()=>d.remove(),400); }, 4000);
+  }
 
   taskForm.addEventListener('submit', (e)=>{ e.preventDefault(); saveTaskFromModal(); });
   function saveTaskFromModal(){
@@ -2832,8 +3214,11 @@
     const style = { font: taskFont.value||undefined, size: taskFontSize.value? Number(taskFontSize.value) : undefined, color: taskFontColor.value||undefined };
     const col = state.columns.find(c=>c.id===modalCtx.columnId); if(!col){ modal.close(); return; }
     const newAtts = modalAttBuffer.slice();
-    if(modalCtx.taskId){ const i = col.tasks.findIndex(t=>t.id===modalCtx.taskId); if(i>=0){ const ex = col.tasks[i]; const merged = (ex.atts||[]).concat(newAtts); col.tasks[i] = Object.assign({}, ex, {title,notes,priority,style, atts: merged}); } }
-    else { col.tasks.unshift({ id: uid(), title, notes, priority, created: Date.now(), style, atts: newAtts, comments: [] }); }
+    // تحويل التاريخ المُدخل إلى timestamp
+    const dateVal = document.getElementById('taskDate').value;
+    const createdTs = dateVal ? new Date(dateVal).getTime() : Date.now();
+    if(modalCtx.taskId){ const i = col.tasks.findIndex(t=>t.id===modalCtx.taskId); if(i>=0){ const ex = col.tasks[i]; const merged = (ex.atts||[]).concat(newAtts); col.tasks[i] = Object.assign({}, ex, {title,notes,priority,style, atts: merged, created: createdTs}); } }
+    else { col.tasks.unshift({ id: uid(), title, notes, priority, created: createdTs, style, atts: newAtts, comments: [] }); }
     persist(); render(); modal.close();
   }
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modal.open) modal.close(); if(e.key==='Escape' && gModal.open) gModal.close(); if(e.key==='Escape' && bulletinModal.open) bulletinModal.close(); });
@@ -2937,6 +3322,404 @@
     }));
     const xml = spreadsheetML('AllTasks', rows);
     downloadBlob(new Blob([xml],{type:'application/vnd.ms-excel'}),'kanban-all.xls');
+  }
+
+  /* ══════════════════════════════════════════════════════
+     نظام التقارير الرسمية
+  ══════════════════════════════════════════════════════ */
+  function openReportModal(){
+    // تعيين التواريخ الافتراضية (أول الشهر الحالي → اليوم)
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('rptDateFrom').value = firstDay.toISOString().slice(0,10);
+    document.getElementById('rptDateTo').value = today.toISOString().slice(0,10);
+    document.getElementById('rptStatus').textContent = '';
+    // ملء قائمة الأعمدة
+    const list = document.getElementById('rptColsList');
+    list.innerHTML = '';
+    (state?.columns||[]).forEach(col=>{
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2);padding:5px 8px;border-radius:8px;border:1px solid var(--border2);background:var(--card);';
+      lbl.innerHTML = `<input type="checkbox" data-rpt-col="${col.id}" checked style="width:15px;height:15px;flex-shrink:0;"> <span style="font-weight:600">${escapeHtml(col.title)}</span> <span style="color:var(--muted);font-size:11px;margin-right:auto">(${col.tasks.length} مهمة)</span>`;
+      list.appendChild(lbl);
+    });
+    document.getElementById('reportModal').showModal();
+  }
+
+  function _getReportData(){
+    const fromVal = document.getElementById('rptDateFrom').value;
+    const toVal   = document.getElementById('rptDateTo').value;
+    if(!fromVal || !toVal){ document.getElementById('rptStatus').textContent='⚠ حدد نطاق التاريخ'; return null; }
+    const fromTs = new Date(fromVal).setHours(0,0,0,0);
+    const toTs   = new Date(toVal).setHours(23,59,59,999);
+    if(fromTs > toTs){ document.getElementById('rptStatus').textContent='⚠ تاريخ البداية يجب أن يكون قبل تاريخ النهاية'; return null; }
+
+    const selectedCols = [...document.querySelectorAll('[data-rpt-col]:checked')].map(el=>el.dataset.rptCol);
+    if(!selectedCols.length){ document.getElementById('rptStatus').textContent='⚠ اختر عموداً واحداً على الأقل'; return null; }
+
+    const opts = {
+      showNotes:    document.getElementById('rptOptNotes').checked,
+      showComments: document.getElementById('rptOptComments').checked,
+      showPriority: document.getElementById('rptOptPriority').checked,
+      showDate:     document.getElementById('rptOptDate').checked,
+    };
+    const meta = {
+      org:    document.getElementById('rptOrg').value.trim(),
+      dept:   document.getElementById('rptDept').value.trim(),
+      author: document.getElementById('rptAuthor').value.trim(),
+      number: document.getElementById('rptNumber').value.trim(),
+      fromDate: fromVal,
+      toDate:   toVal,
+      pageName: root?.pages[activePageId]?.name || '',
+      generatedAt: new Date().toLocaleString('ar-JO'),
+    };
+
+    const sections = [];
+    (state?.columns||[]).forEach(col=>{
+      if(!selectedCols.includes(col.id)) return;
+      const tasks = col.tasks.filter(t=> t.created >= fromTs && t.created <= toTs);
+      sections.push({ colTitle: col.title, tasks, total: tasks.length });
+    });
+
+    const totalAll = sections.reduce((s,c)=>s+c.total,0);
+    return { meta, opts, sections, totalAll, fromTs, toTs };
+  }
+
+  function _buildReportHTML(data, forPrint){
+    const { meta, opts, sections, totalAll } = data;
+    const priLabel = p => p==='high'?'مرتفعة':p==='medium'?'متوسطة':'منخفضة';
+    const priColor = p => p==='high'?'#dc2626':p==='medium'?'#d97706':'#16a34a';
+
+    // بناء رؤوس الجدول
+    const thCols = ['#', 'عنوان المهمة'];
+    if(opts.showNotes)    thCols.push('الملاحظات / التفاصيل');
+    if(opts.showPriority) thCols.push('الأولوية');
+    if(opts.showDate)     thCols.push('تاريخ الإنشاء');
+    if(opts.showComments) thCols.push('التعليقات');
+
+    const fromDateFmt = new Date(meta.fromDate).toLocaleDateString('ar-JO',{year:'numeric',month:'long',day:'numeric'});
+    const toDateFmt   = new Date(meta.toDate).toLocaleDateString('ar-JO',{year:'numeric',month:'long',day:'numeric'});
+
+    let html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>تقرير رسمي — ${escapeHtml(meta.org)}</title>
+<style>
+  @page { size: A4; margin: 2cm 1.8cm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, 'Noto Sans Arabic', Arial, sans-serif;
+    font-size: 12pt;
+    color: #1a1a2e;
+    background: #fff;
+    direction: rtl;
+  }
+  .page-wrap { max-width: 800px; margin: 0 auto; padding: ${forPrint?'0':'24px'}; }
+
+  /* ── رأس التقرير ── */
+  .rpt-header {
+    border: 2px solid #1a3a6b;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .rpt-header-top {
+    background: #1a3a6b;
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .rpt-org-name { font-size: 16pt; font-weight: 700; letter-spacing: .3px; }
+  .rpt-badge {
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 10pt;
+    white-space: nowrap;
+  }
+  .rpt-header-meta {
+    background: #eef3fb;
+    padding: 10px 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px 16px;
+    border-top: 1px solid #cdd8f0;
+  }
+  .rpt-meta-item { font-size: 10pt; color: #2c3e50; }
+  .rpt-meta-item strong { color: #1a3a6b; }
+
+  /* ── عنوان التقرير الرئيسي ── */
+  .rpt-title-block {
+    text-align: center;
+    margin: 20px 0 16px;
+    padding: 14px;
+    border-top: 3px double #1a3a6b;
+    border-bottom: 3px double #1a3a6b;
+  }
+  .rpt-main-title {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1a3a6b;
+    margin-bottom: 5px;
+  }
+  .rpt-subtitle { font-size: 11pt; color: #555; }
+  .rpt-date-range {
+    display: inline-block;
+    margin-top: 6px;
+    background: #1a3a6b;
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 16px;
+    font-size: 10.5pt;
+    font-weight: 600;
+  }
+
+  /* ── ملخص إجمالي ── */
+  .rpt-summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .rpt-summary-card {
+    flex: 1;
+    min-width: 120px;
+    background: #f0f4fb;
+    border: 1px solid #cdd8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    text-align: center;
+  }
+  .rpt-summary-num { font-size: 22pt; font-weight: 800; color: #1a3a6b; line-height: 1; }
+  .rpt-summary-lbl { font-size: 9pt; color: #555; margin-top: 3px; }
+
+  /* ── قسم العمود ── */
+  .rpt-section { margin-bottom: 24px; page-break-inside: avoid; }
+  .rpt-section-header {
+    background: #1a3a6b;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12pt;
+    font-weight: 700;
+  }
+  .rpt-section-count {
+    background: rgba(255,255,255,.2);
+    border-radius: 99px;
+    padding: 1px 10px;
+    font-size: 10pt;
+    font-weight: 600;
+  }
+  .rpt-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid #1a3a6b;
+    border-top: none;
+    font-size: 10.5pt;
+  }
+  .rpt-table th {
+    background: #dce6f5;
+    color: #1a3a6b;
+    border: 1px solid #b0c4e8;
+    padding: 7px 10px;
+    font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .rpt-table td {
+    border: 1px solid #d0daf0;
+    padding: 7px 10px;
+    vertical-align: top;
+    line-height: 1.55;
+    color: #1a1a2e;
+  }
+  .rpt-table tr:nth-child(even) td { background: #f5f8ff; }
+  .rpt-table tr:last-child td { border-bottom: 1.5px solid #1a3a6b; }
+  .rpt-empty { padding: 14px; text-align: center; color: #888; font-style: italic; border: 1.5px solid #1a3a6b; border-top: none; border-radius: 0 0 4px 4px; }
+  .pri-badge {
+    display: inline-block;
+    border-radius: 3px;
+    padding: 1px 8px;
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .pri-high   { background: #dc2626; }
+  .pri-medium { background: #d97706; }
+  .pri-low    { background: #16a34a; }
+
+  /* ── تذييل التقرير ── */
+  .rpt-footer {
+    margin-top: 28px;
+    border-top: 2px solid #1a3a6b;
+    padding-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .rpt-sign-box {
+    border: 1px solid #b0c4e8;
+    border-radius: 4px;
+    padding: 10px 14px;
+    text-align: center;
+    min-height: 70px;
+  }
+  .rpt-sign-title { font-size: 10pt; font-weight: 700; color: #1a3a6b; margin-bottom: 6px; }
+  .rpt-sign-line { border-bottom: 1px solid #999; margin: 22px 20px 4px; }
+  .rpt-sign-name { font-size: 9.5pt; color: #555; }
+  .rpt-gen-info { font-size: 9pt; color: #888; text-align: center; margin-top: 12px; }
+
+  ${forPrint ? `
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .rpt-section { page-break-inside: avoid; }
+  }
+  .print-bar { display: flex; gap: 10px; justify-content: center; margin-bottom: 18px; padding: 12px; background: #f0f4fb; border: 1px solid #cdd8f0; border-radius: 8px; }
+  .print-bar button { padding: 8px 20px; border-radius: 6px; border: 1px solid #1a3a6b; cursor: pointer; font-family: inherit; font-size: 12pt; font-weight: 600; }
+  .print-bar .pbtn-print { background: #1a3a6b; color: #fff; }
+  .print-bar .pbtn-close { background: #fff; color: #1a3a6b; }
+  ` : ''}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+${forPrint ? `<div class="print-bar no-print">
+  <button class="pbtn-print" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+  <button class="pbtn-close" onclick="window.close()">✕ إغلاق</button>
+</div>` : ''}
+
+<!-- رأس التقرير -->
+<div class="rpt-header">
+  <div class="rpt-header-top">
+    <div class="rpt-org-name">${escapeHtml(meta.org||'الجهة الحكومية')}</div>
+    ${meta.number ? `<div class="rpt-badge">رقم التقرير: ${escapeHtml(meta.number)}</div>` : ''}
+  </div>
+  <div class="rpt-header-meta">
+    ${meta.dept   ? `<div class="rpt-meta-item"><strong>القسم:</strong> ${escapeHtml(meta.dept)}</div>` : ''}
+    ${meta.author ? `<div class="rpt-meta-item"><strong>أعده:</strong> ${escapeHtml(meta.author)}</div>` : ''}
+    <div class="rpt-meta-item"><strong>الصفحة:</strong> ${escapeHtml(meta.pageName)}</div>
+    <div class="rpt-meta-item"><strong>تاريخ الإصدار:</strong> ${meta.generatedAt}</div>
+  </div>
+</div>
+
+<!-- عنوان التقرير -->
+<div class="rpt-title-block">
+  <div class="rpt-main-title">تقرير متابعة المهام والأعمال</div>
+  <div class="rpt-subtitle">تقرير تفصيلي لحالة المهام خلال الفترة الزمنية المحددة</div>
+  <div class="rpt-date-range">📅 ${escapeHtml(fromDateFmt)} — ${escapeHtml(toDateFmt)}</div>
+</div>
+
+<!-- الملخص الإجمالي -->
+<div class="rpt-summary">
+  <div class="rpt-summary-card">
+    <div class="rpt-summary-num">${totalAll}</div>
+    <div class="rpt-summary-lbl">إجمالي المهام</div>
+  </div>
+  ${sections.map(s=>`
+  <div class="rpt-summary-card">
+    <div class="rpt-summary-num">${s.total}</div>
+    <div class="rpt-summary-lbl">${escapeHtml(s.colTitle)}</div>
+  </div>`).join('')}
+  ${opts.showPriority ? `
+  <div class="rpt-summary-card">
+    <div class="rpt-summary-num" style="color:#dc2626">${sections.reduce((s,c)=>s+c.tasks.filter(t=>t.priority==='high').length,0)}</div>
+    <div class="rpt-summary-lbl">أولوية مرتفعة</div>
+  </div>` : ''}
+</div>
+
+<!-- أقسام الأعمدة -->
+${sections.map(sec => `
+<div class="rpt-section">
+  <div class="rpt-section-header">
+    <span>📂 ${escapeHtml(sec.colTitle)}</span>
+    <span class="rpt-section-count">${sec.total} مهمة</span>
+  </div>
+  ${sec.tasks.length === 0
+    ? `<div class="rpt-empty">لا توجد مهام في هذه الفترة الزمنية</div>`
+    : `<table class="rpt-table">
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>عنوان المهمة</th>
+          ${opts.showNotes    ? '<th>الملاحظات</th>' : ''}
+          ${opts.showPriority ? '<th style="width:90px">الأولوية</th>' : ''}
+          ${opts.showDate     ? '<th style="width:110px">التاريخ</th>' : ''}
+          ${opts.showComments ? '<th>التعليقات</th>' : ''}
+        </tr>
+      </thead>
+      <tbody>
+        ${sec.tasks.map((t,i)=>`
+        <tr>
+          <td style="text-align:center;color:#888;font-weight:700">${i+1}</td>
+          <td><strong>${escapeHtml(t.title)}</strong></td>
+          ${opts.showNotes    ? `<td>${escapeHtml(t.notes||'—').replace(/\n/g,'<br>')}</td>` : ''}
+          ${opts.showPriority ? `<td style="text-align:center"><span class="pri-badge pri-${t.priority}">${priLabel(t.priority)}</span></td>` : ''}
+          ${opts.showDate     ? `<td>${new Date(t.created).toLocaleDateString('ar-JO',{year:'numeric',month:'short',day:'numeric'})}</td>` : ''}
+          ${opts.showComments ? `<td>${(t.comments||[]).length ? (t.comments||[]).map(c=>`<div style="border-bottom:1px dotted #ddd;padding:2px 0;font-size:9.5pt">• ${escapeHtml(c.text)}<span style="color:#999;font-size:8.5pt"> (${c.author||''})</span></div>`).join('') : '<span style="color:#aaa">—</span>'}</td>` : ''}
+        </tr>`).join('')}
+      </tbody>
+    </table>`}
+</div>`).join('')}
+
+<!-- التذييل والتوقيعات -->
+<div class="rpt-footer">
+  <div class="rpt-sign-box">
+    <div class="rpt-sign-title">معد التقرير</div>
+    <div class="rpt-sign-line"></div>
+    <div class="rpt-sign-name">${escapeHtml(meta.author||'.....................')}</div>
+  </div>
+  <div class="rpt-sign-box">
+    <div class="rpt-sign-title">المدير المختص</div>
+    <div class="rpt-sign-line"></div>
+    <div class="rpt-sign-name">التوقيع والختم</div>
+  </div>
+</div>
+<div class="rpt-gen-info">صدر هذا التقرير آلياً من نظام متابعة المهام — ${meta.generatedAt}</div>
+
+</div>
+</body>
+</html>`;
+    return html;
+  }
+
+  function previewReport(){
+    const data = _getReportData(); if(!data) return;
+    if(data.totalAll === 0){ document.getElementById('rptStatus').textContent = '⚠ لا توجد مهام في هذه الفترة للأعمدة المختارة'; return; }
+    const html = _buildReportHTML(data, true);
+    const win = window.open('', '_blank');
+    if(!win){ alert('يرجى السماح بفتح النوافذ المنبثقة لعرض التقرير'); return; }
+    win.document.write(html);
+    win.document.close();
+    document.getElementById('reportModal').close();
+  }
+
+  function downloadReportWord(){
+    const data = _getReportData(); if(!data) return;
+    if(data.totalAll === 0){ document.getElementById('rptStatus').textContent = '⚠ لا توجد مهام في هذه الفترة'; return; }
+    const html = _buildReportHTML(data, false);
+    const fname = `تقرير_${sanitizeFilename(data.meta.org||'')}_${data.meta.fromDate}_${data.meta.toDate}.doc`;
+    downloadBlob(new Blob(['\ufeff'+html],{type:'application/msword;charset=utf-8'}), fname);
+    document.getElementById('rptStatus').textContent = '✅ تم تنزيل التقرير';
+  }
+
+  function bindReportUI(){
+    document.getElementById('reportBtn').addEventListener('click', openReportModal);
+    document.getElementById('reportModalClose').addEventListener('click', ()=> document.getElementById('reportModal').close());
+    document.getElementById('rptCancelBtn').addEventListener('click', ()=> document.getElementById('reportModal').close());
+    document.getElementById('rptPreviewBtn').addEventListener('click', previewReport);
+    document.getElementById('rptWordBtn').addEventListener('click', downloadReportWord);
+    document.getElementById('rptSelAll').addEventListener('click', ()=>{ document.querySelectorAll('[data-rpt-col]').forEach(el=>el.checked=true); });
+    document.getElementById('rptDeselAll').addEventListener('click', ()=>{ document.querySelectorAll('[data-rpt-col]').forEach(el=>el.checked=false); });
   }
 
   // ===== Excel/CSV import =====
@@ -3076,6 +3859,18 @@
     } else { bannerFromAdminToBranch.style.display='none'; }
 
     banners.style.display = (bannerGlobal.style.display!=="none" || bannerToAdmin.style.display!=="none" || bannerFromAdminToBranch.style.display!=="none") ? '' : 'none';
+
+    // إشعار المهام المحوَّلة للصفحات الفرعية
+    const bannerTransferred = document.getElementById('bannerTransferred');
+    if(page.role!=='admin'){
+      const transferNotes = (page.notes||[]).filter(n=>n.author==='admin' && n.type==='transfer');
+      const latestTransfer = [...transferNotes].sort((a,b)=>b.created-a.created)[0];
+      if(latestTransfer){
+        bannerTransferred.style.display='';
+        bannerTransferred.innerHTML = `<strong>↗️ مهمة واردة من المسؤول:</strong> "${escapeHtml(latestTransfer.taskTitle||'')}" <small class="muted">${new Date(latestTransfer.created).toLocaleString('ar-JO')}</small>`;
+        banners.style.display='';
+      } else { bannerTransferred.style.display='none'; }
+    } else { bannerTransferred.style.display='none'; }
   }
   function openBulletin(){
     ensurePageNotes(activePageId);
@@ -3184,6 +3979,12 @@
 
     importExcel.addEventListener('change', handleExcelImport);
     bulletinBtn.addEventListener('click', showNotifPanel);
+
+    // ── ربط نافذة تحويل المهام ──
+    document.getElementById('transferModalClose').addEventListener('click', ()=>{ document.getElementById('transferTaskModal').close(); _transferCtx=null; });
+    document.getElementById('transferCancelBtn').addEventListener('click', ()=>{ document.getElementById('transferTaskModal').close(); _transferCtx=null; });
+    document.getElementById('transferConfirmBtn').addEventListener('click', ()=> confirmTransfer());
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && document.getElementById('transferTaskModal').open){ document.getElementById('transferTaskModal').close(); _transferCtx=null; } });
     // زر إضافة صفحة جديدة (في لوحة المسؤول)
     document.getElementById('addNewPageBtn').addEventListener('click', ()=> openAddPageModal());
     document.getElementById('addPageModalClose').addEventListener('click', ()=> addPageModal.close());
@@ -3198,6 +3999,7 @@
       }); 
     });
     bindSheetsUI();
+    bindReportUI();
   }
 
   // ===== Init =====
