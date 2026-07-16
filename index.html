@@ -253,7 +253,7 @@
       color:#f0f4ff;
       transition:transform .15s, box-shadow .15s, border-color .15s;
       min-width:0;
-      overflow-wrap:anywhere;
+      overflow-wrap:normal;
     }
     [data-theme="light"] .task{ color:#0f172a; }
     .task:hover{
@@ -263,8 +263,8 @@
     }
     .task:active{cursor:grabbing; transform:scale(.98)}
     .task-header{display:flex; align-items:flex-start; justify-content:space-between; gap:8px; min-width:0}
-    .task-title{font-weight:700; font-size:14px; line-height:1.4; color:inherit; word-wrap:break-word; overflow-wrap:break-word; hyphens:none; min-width:0; flex:1;}
-    .task-notes{font-size:13px; line-height:1.5; color:inherit; opacity:.9; word-wrap:break-word; overflow-wrap:break-word; hyphens:none; min-width:0;}
+    .task-title{font-weight:700; font-size:14px; line-height:1.4; color:inherit; overflow-wrap:normal; word-break:normal; hyphens:none; min-width:0; flex:1;}
+    .task-notes{font-size:13px; line-height:1.5; color:inherit; opacity:.9; overflow-wrap:normal; word-break:normal; hyphens:none; min-width:0;}
 
     /* ── Pills ── */
     .pill{
@@ -1508,6 +1508,11 @@
 
     /* ── Responsive ── */
     @media(max-width:480px){
+      .board{grid-template-columns:1fr;}
+      .task{overflow-wrap:anywhere; word-break:break-word;}
+      .task-title{overflow-wrap:anywhere; word-break:break-word;}
+      .task-notes{overflow-wrap:anywhere; word-break:break-word;}
+      .column{word-wrap:break-word; overflow-wrap:anywhere;}
       .chat-panel{width:100vw;}
       .chat-fab{bottom:16px; right:16px;}
     }
