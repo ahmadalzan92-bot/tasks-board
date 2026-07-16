@@ -15,12 +15,13 @@
       --panel:#0f1f38;
       --panel2:#132240;
       --card:#0a1628;
-      --border:rgba(56,139,253,.18);ش
+      --border:rgba(56,139,253,.18);
       --border2:rgba(56,139,253,.10);
       --text:#e2eaf6;
       --text2:#c8d8f0;
       --muted:#6b8ab5;
-      --accent:#3b82f6;ؤ      --accent2:#60a5fa;
+      --accent:#3b82f6;
+      --accent2:#60a5fa;
       --green:#22c55e;
       --green2:#4ade80;
       --red:#ef4444;
@@ -4886,7 +4887,15 @@ ${sections.map(sec => `
             if(!confirm(`استيراد بيانات صفحة "${data.page?.name||data.pageId}"؟ سيتم استبدال بيانات الصفحة الحالية.`)) { prog.remove(); return; }
             _importSinglePage(data.pageId, data.page, data.board, prog);
           } else if(data.boards && data.type==='full' && !isAdmin){
-            _showImportModal(data, prog);
+            // المستخدم العادي: استيراد صفحته فقط
+            const myBoard=data.boards[activePageId];
+            if(!myBoard){
+              prog.innerHTML='⚠️ لا توجد بيانات لهذه الصفحة في النسخة الاحتياطية';
+              setTimeout(()=>prog.remove(),3000);
+              return;
+            }
+            if(!confirm(`استيراد بيانات صفحتك فقط (${root?.pages[activePageId]?.name||activePageId})؟ سيتم استبدال البيانات الحالية.`)){ prog.remove(); return; }
+            _importSinglePage(activePageId, data.root?.pages?.[activePageId]||null, myBoard, prog);
           } else if(Array.isArray(data.columns)){
             const cleanCols=data.columns.map(c=>({id:c.id||uid(),title:String(c.title||'عمود'),color:c.color,tasks:Array.isArray(c.tasks)?c.tasks.map(t=>({id:t.id||uid(),title:String(t.title||'مهمة'),notes:String(t.notes||''),priority:(['low','medium','high'].includes(t.priority)?t.priority:'medium'),created:Number(t.created||Date.now()),style:t.style||{},atts:Array.isArray(t.atts)?t.atts.filter(a=>a&&a.dataUrl):[],comments:Array.isArray(t.comments)?t.comments.filter(c=>c&&c.text):[]})):[]}));
             state.columns=cleanCols; persist(); render();
