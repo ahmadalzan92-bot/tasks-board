@@ -6090,11 +6090,12 @@ ${sections.map(sec => `
   function _chatTogglePanel(){
     if(!_chatPanel) return;
     if(_chatPanel.classList.contains('open')) _chatClosePanel();
-    else { _chatPanel.classList.add('open'); _chatRenderContacts(); }
+    else { _chatPanel.style.display='flex'; _chatPanel.classList.add('open'); _chatRenderContacts(); }
   }
   function _chatClosePanel(){
     if(!_chatPanel) return;
     _chatPanel.classList.remove('open');
+    _chatPanel.style.display='none';
     _chatBackToContacts();
   }
 
