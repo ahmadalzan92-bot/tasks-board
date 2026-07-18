@@ -2753,7 +2753,7 @@
   function hide(el){ el.hidden=true; el.style.display='none'; }
   function uid(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3); }
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-  function _getLogoHTML(h){ h=h||48; if(!window._LOGO_SRC){ const el=document.getElementById('appLogo')||document.querySelector('#gate img[alt*="شعار"]')||document.querySelector('#appHeader img'); if(el&&el.src) window._LOGO_SRC=el.src; } const src=window._LOGO_SRC||''; return src?'<img src="'+src+'" style="height:'+h+'px;width:auto;object-fit:contain;flex-shrink:0;" />':''; }
+  function _getLogoHTML(h){ h=h||48; if(!window._LOGO_SRC){ const el=document.getElementById('appLogo')||document.querySelector('#gate img[alt*="شعار"]')||document.querySelector('#appHeader img'); if(el) window._LOGO_SRC=el.getAttribute('src'); } const src=window._LOGO_SRC||''; if(!src) return ''; return `<img src="${src}" style="height:${h}px;width:auto;object-fit:contain;flex-shrink:0;" />`; }
   function _cleanText(s){ return String(s||'').replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069\u200B\u00A0\u200C\u200D\uFEFF]/g,''); }
   function sanitizeFilename(s){ return String(s||'file').replace(/[\\/:*?"<>|]/g,'_').slice(0,60); }
 
@@ -3013,6 +3013,7 @@
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn accent" data-save>💾 حفظ</button>
+          ${p.id!=='admin'?`<button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb;font-weight:700;" data-open-page="${p.id}">🌐 فتح الصفحة</button>`:''}
           ${p.id!=='admin'?`<button class="btn danger" data-reset>↺ إعادة ضبط</button><button class="btn danger" data-delete-page="${p.id}">🗑 حذف الصفحة</button>`:''}
         </div>`;
 
@@ -3069,6 +3070,17 @@
       const resetBtn = card.querySelector('[data-reset]');
       if(resetBtn) resetBtn.addEventListener('click', ()=>{ _confirmResetPage(p.id, (pid)=>{ saveBoard(pid, createDefaultBoard()); if(pid===activePageId){ state=loadBoard(pid); render(); } renderGlobal(); }); });
       adminGrid.appendChild(card);
+    });
+    // زر فتح صفحة في نافذة جديدة
+    adminGrid.querySelectorAll('[data-open-page]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const pid = btn.dataset.openPage;
+        const page = root.pages[pid];
+        if(!page){ alert('الصفحة غير موجودة'); return; }
+        if(!page.enabled){ alert('الصفحة معطلة'); return; }
+        const url = location.href.split('?')[0] + '?autologin=' + encodeURIComponent(pid);
+        window.open(url, '_blank');
+      });
     });
     // زر حذف صفحة في كل بطاقة (عدا المسؤول)
     adminGrid.querySelectorAll('[data-delete-page]').forEach(btn=>{
@@ -4954,7 +4966,7 @@
     const tTitle = `<h1 style="${style.font?`font-family:${style.font};`:''}${style.size?`font-size:${style.size+2}px;`:''}${style.color?`color:${style.color};`:''}">${escapeHtml(task.title)}</h1>`;
     const tNotes = task.notes? `<p style="${style.font?`font-family:${style.font};`:''}${style.size?`font-size:${style.size}px;`:''}${style.color?`color:${style.color};`:''}">${escapeHtml(task.notes).replace(/\n/g,'<br>')}</p>` : '';
     const tAction = (task.actions||[]).length || task.actionTaken ? `<h3>الإجراء المتخذ</h3><p>${_getActionsHtml(task).replace(/\n/g,'<br>')}</p>` : '';
-    const html = `<!DOCTYPE html><html lang='ar' dir='rtl'><head><meta charset='utf-8'><title>${escapeHtml(task.title)}</title></head><body style='font-family:Segoe UI,Tahoma;text-align:center;margin-bottom:20px;'>${_getLogoHTML(60)}${tTitle}<p><strong>الأولوية:</strong> ${task.priority==='high'?'مرتفعة':task.priority==='medium'?'متوسطة':'منخفضة'}</p><p><strong>تاريخ الإنشاء:</strong> ${new Date(task.created).toLocaleString('ar-JO')}</p>${chosen?`<p><strong>لون العمود:</strong> <span style='background:${chosen};padding:0 6px;border:1px solid #ccc'>${chosen}</span></p>`:''}${tNotes}${tAction}${(task.atts&&task.atts.length)?`<h3>مرفقات (${task.atts.length})</h3><ul>`+task.atts.map(a=>`<li>${escapeHtml(a.name)} — ${a.type}</li>`).join('')+`</ul>`:''}${(task.comments&&task.comments.length)?`<h3>تعليقات (${task.comments.length})</h3><ul>`+task.comments.map(c=>`<li>${escapeHtml(c.text)} — ${new Date(c.created).toLocaleString('ar-JO')}</li>`).join('')+`</ul>`:''}</body></html>`;
+    const html = `<!DOCTYPE html><html lang='ar' dir='rtl'><head><meta charset='utf-8'><title>${escapeHtml(task.title)}</title></head><body style='font-family:Segoe UI,Tahoma;text-align:center;margin-bottom:20px;'>${tTitle}<p><strong>الأولوية:</strong> ${task.priority==='high'?'مرتفعة':task.priority==='medium'?'متوسطة':'منخفضة'}</p><p><strong>تاريخ الإنشاء:</strong> ${new Date(task.created).toLocaleString('ar-JO')}</p>${chosen?`<p><strong>لون العمود:</strong> <span style='background:${chosen};padding:0 6px;border:1px solid #ccc'>${chosen}</span></p>`:''}${tNotes}${tAction}${(task.atts&&task.atts.length)?`<h3>مرفقات (${task.atts.length})</h3><ul>`+task.atts.map(a=>`<li>${escapeHtml(a.name)} — ${a.type}</li>`).join('')+`</ul>`:''}${(task.comments&&task.comments.length)?`<h3>تعليقات (${task.comments.length})</h3><ul>`+task.comments.map(c=>`<li>${escapeHtml(c.text)} — ${new Date(c.created).toLocaleString('ar-JO')}</li>`).join('')+`</ul>`:''}</body></html>`;
     downloadBlob(new Blob([html],{type:'application/msword'}), `${sanitizeFilename(task.title)}.doc`);
   }
   function exportTaskToExcel(task, colColor){
@@ -5036,7 +5048,6 @@ p{margin:0 0 6px 0;padding:0}
 <div class="wb-wrap">
 <div class="wb-hdr">
   <div class="wb-hdr-top">
-    ${_getLogoHTML(60)}
     <div class="wb-hdr-org">وزارة الأشغال العامة والإسكان</div>
     <div class="wb-hdr-sub">المملكة الأردنية الهاشمية</div>
     <div style="font-size:9pt;font-weight:700;color:#1a3a6b;margin-top:4px;">تحت إشراف م. عبدالناصر الكلباني</div>
@@ -6358,6 +6369,17 @@ ${sections.map(sec => `
 
       loadRoot();
       fillPageSelect();
+
+      // فتح مباشر برابط autologin
+      const _alp = new URLSearchParams(location.search).get('autologin');
+      if(_alp && root.pages[_alp]){
+        const pg = root.pages[_alp];
+        if(pg.enabled){
+          pageSelect.value = _alp;
+          openPage(_alp);
+          history.replaceState(null,'',location.pathname);
+        }
+      }
 
       // ── بدء المستمع الحي على root (يعمل دائماً حتى في شاشة الدخول) ──
       _subscribeRoot();
